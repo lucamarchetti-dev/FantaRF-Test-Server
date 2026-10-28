@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "_macros.html" import role_badge %}
+{% from "staff/_results_macros.html" import cell_fields, entry_text, stat_text, state_tag %}
+{% block title %}Verifica · {{ contest.name }}{% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('staff_results.overview', contest_id=contest.id) }}">← Risultati</a></p>
+<h1>Verifica dei dati</h1>
+<p class="muted">{{ contest.name }} · {{ 'a concorso pubblicato ogni modifica è una correzione con motivo e richiede poi il ricalcolo' if contest.status == 'published' else 'qui si risolvono i conflitti tra compilazioni' }}</p>
+{% macro custom_form(p, c, w, submit_label, require_reason=True) %}
+  <form method="post" action="{{ url_for('staff_results.cell', contest_id=contest.id) }}" class="form cellform">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="player_id" value="{{ p.player_id }}"><input type="hidden" name="match_no" value="{{ c.match_no }}">
+    <input type="hidden" name="choice" value="custom">
+    <div class="cellrow">{{ cell_fields(p.player_id ~ '_' ~ c.match_no, {'sv': c.stat is not none and not c.stat.played, 'v': (c.stat.base_vote if c.stat and c.stat.played else ''), 'b': (c.stat.bonus_count or '') if c.stat else '', 'm': (c.stat.malus_count or '') if c.stat else ''}, p.name ~ ', partita ' ~ c.match_no, w) }}</div>
+    <div class="form-row"><div class="field grow"><label>Motivo{% if require_reason %} (obbligatorio){% endif %}</label><input name="note" required minlength="{{ 5 if contest.status == 'published' else 3 }}" maxlength="300"></div>
+      <div class="field actions-inline"><button class="btn btn-sm" type="submit" data-confirm="Registrare questi valori?">{{ submit_label }}</button></div></div>
+  </form>
+{% endmacro %}
+
+{% if conflicts %}
+<section class="panel" aria-labelledby="confl">
+  <h2 id="confl">Conflitti ({{ conflicts|length }})</h2>
+  <p>Le compilazioni non coincidono. Scegli quella giusta oppure inserisci i valori verificati sul referto; il motivo resta registrato.</p>
+  {% for it in conflicts %}{% set p = it.player %}{% set w = weights[p.ruolo] %}
+  <details class="issue-group" open>
+    <summary>{{ role_badge(p.ruolo) }} <strong>{{ p.name }}</strong> · partita {{ it.match_no }}</summary>
+    <form method="post" action="{{ url_for('staff_results.cell', contest_id=contest.id) }}" class="form cellform">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="player_id" value="{{ p.player_id }}"><input type="hidden" name="match_no" value="{{ it.match_no }}">
+      {% for e in it.entries %}
+      <label class="check"><input type="radio" name="choice" value="entry:{{ e.id }}" {% if loop.first %}checked{% endif %}> <span><strong>{{ e.user_name }}</strong>: {{ entry_text(e, w) }}</span></label>
+      {% endfor %}
+      <label class="check"><input type="radio" name="choice" value="custom"> <span>Altri valori:</span></label>
+      <div class="cellrow">{{ cell_fields(p.player_id ~ '_' ~ it.match_no, {'sv': false, 'v': '', 'b': '', 'm': ''}, p.name ~ ', partita ' ~ it.match_no, w) }}</div>
+      <div class="form-row"><div class="field grow"><label>Motivo (obbligatorio)</label><input name="note" required minlength="3" maxlength="300"></div>
+        <div class="field actions-inline"><button class="btn btn-sm" type="submit">Decidi</button></div></div>
+    </form>
+  </details>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if pending %}
+<section class="panel" aria-labelledby="att">
+  <h2 id="att">In attesa di una seconda compilazione ({{ pending|length }})</h2>
+  {% if allow_single and contest.status == 'calculating' %}
+  <p>Se non c'è una seconda persona puoi convalidare la compilazione da solo: il dato resta segnato come «convalidato da una sola compilazione».</p>
+  <form method="post" action="{{ url_for('staff_results.accept_singles', contest_id=contest.id) }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <button class="btn btn-quiet" type="submit" data-confirm="Convalidare tutte le {{ pending|length }} compilazioni singole?">Convalida tutte le compilazioni singole</button></form>
+  {% endif %}
+  <table class="table simple compact">
+    <thead><tr><th scope="col">Giocatore</th><th scope="col">Partita</th><th scope="col">Inserito da</th><th scope="col"><span class="sr-only">Azione</span></th></tr></thead>
+    <tbody>{% for it in pending %}{% set p = it.player %}{% set w = weights[p.ruolo] %}{% set e = it.entries[0] %}
+      <tr><td data-label="Giocatore">{{ role_badge(p.ruolo) }} {{ p.name }}</td><td data-label="Partita">{{ it.match_no }}</td>
+        <td data-label="Inserito da">{{ e.user_name }}: {{ entry_text(e, w) }}</td>
+        <td data-label="">{% if allow_single and contest.status == 'calculating' %}
+          <form method="post" action="{{ url_for('staff_results.cell', contest_id=contest.id) }}" class="inline">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="player_id" value="{{ p.player_id }}">
+            <input type="hidden" name="match_no" value="{{ it.match_no }}"><input type="hidden" name="choice" value="single">
+            <button class="btn btn-quiet btn-sm" type="submit">Convalida</button></form>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if missing %}
+<section class="panel" aria-labelledby="mis">
+  <h2 id="mis">Ancora da inserire ({{ missing|length }})</h2>
+  <p class="muted">{% for it in missing[:40] %}{{ it.player.name }} (partita {{ it.match_no }}){% if not loop.last %} · {% endif %}{% endfor %}{% if missing|length > 40 %} …{% endif %}</p>
+</section>
+{% endif %}
+
+<section class="panel" aria-labelledby="ver">
+  <h2 id="ver">Dati verificati ({{ verified|length }})</h2>
+  <p class="muted">«{{ 'Correggi' if contest.status == 'published' else 'Modifica' }}» registra nuovi valori con il motivo e lascia traccia del valore precedente.</p>
+  <table class="table simple compact">
+    <thead><tr><th scope="col">Giocatore</th><th scope="col">Partita</th><th scope="col">Dato</th><th scope="col">Stato</th><th scope="col"><span class="sr-only">Azione</span></th></tr></thead>
+    <tbody>{% for it in verified %}{% set p = it.player %}{% set w = weights[p.ruolo] %}
+      <tr><td data-label="Giocatore">{{ role_badge(p.ruolo) }} {{ p.name }}</td><td data-label="Partita">{{ it.match_no }}</td>
+        <td data-label="Dato">{{ stat_text(it.stat, w) }}</td>
+        <td data-label="Stato">{{ state_tag(it.state) }} <span class="muted">{{ {'confirmed': 'due compilazioni concordano', 'single': 'una sola compilazione', 'resolved': 'deciso dallo staff', 'corrected': 'corretto'}[it.stat.status] }}{% if it.stat.note and it.stat.status in ('resolved','corrected') %} — {{ it.stat.note }}{% endif %}</span></td>
+        <td data-label=""><details><summary>{{ 'Correggi' if contest.status == 'published' else 'Modifica' }}</summary>{{ custom_form(p, it, w, 'Registra') }}</details></td></tr>
+    {% else %}<tr><td colspan="5">Nessun dato verificato finora.</td></tr>{% endfor %}</tbody>
+  </table>
+</section>
+
+{% if changes %}
+<section class="panel" aria-labelledby="mod">
+  <h2 id="mod">Decisioni registrate</h2>
+  <ul class="plain">{% for c in changes %}<li>{{ c.created_at|localtime }} · {{ c.user_name or 'sistema' }} · {{ c.full_name }} (partita {{ c.match_no }}) · <code>{{ c.action }}</code>{% if c.reason %} — «{{ c.reason }}»{% endif %}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

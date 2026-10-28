@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Accedi{% endblock %}
+{% block content %}
+<section class="narrow">
+  <h1>Accedi</h1>
+  <p class="muted">Gli account vengono creati dallo staff. Se non ne hai uno, contatta un membro dello staff.</p>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" class="form" autocomplete="on">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+    <div class="field">
+      <label for="username">Nome utente</label>
+      <input id="username" name="username" value="{{ username }}" required autocomplete="username" autocapitalize="none" spellcheck="false" autofocus>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required autocomplete="current-password">
+    </div>
+    <button class="btn" type="submit">Accedi</button>
+  </form>
+</section>
+{% endblock %}

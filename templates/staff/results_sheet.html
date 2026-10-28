@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_macros.html" import role_badge, team_label %}
+{% from "staff/_results_macros.html" import cell_fields %}
+{% block title %}Inserimento voti · {{ contest.name }}{% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('staff_results.overview', contest_id=contest.id) }}">← Risultati</a></p>
+<h1>Inserimento voti</h1>
+<p class="lead-sm">{{ contest.name }} · inserisci come <strong>{{ user['display_name'] }}</strong></p>
+<p class="notice notice-ok" role="note">Il dato <strong>vale subito</strong>, senza altre conferme. «SV» = non ha giocato. In ogni partita: voto base, numero di bonus (+) e di malus (−) del ruolo.
+  Una cella vuota <strong>non cancella nulla</strong> (le celle già inserite compaiono compilate). Se due persone modificano lo stesso dato vale l'ultimo salvataggio; ogni modifica resta registrata.</p>
+
+{% if errors %}
+<div class="notice notice-error" role="alert"><p><strong>Non ho salvato nulla.</strong> Correggi questi punti:</p>
+  <ul class="plain">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<form method="post">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  {% for ruolo, label, players in groups %}
+  {% set w = weights[ruolo] %}
+  <section class="panel sheet-panel" aria-labelledby="g-{{ ruolo }}">
+    <h2 id="g-{{ ruolo }}">{{ role_badge(ruolo) }} {{ label }} <span class="h1-sub">{{ w.bonus_label }} +{{ w.bonus_weight|num }} · {{ w.malus_label }} −{{ w.malus_weight|num }}</span></h2>
+    <div class="sheet-wrap">
+    <table class="sheet">
+      <thead>
+        <tr><th scope="col" rowspan="2">Giocatore</th>{% for m in range(1, grid.matches + 1) %}<th scope="colgroup" colspan="4">Partita {{ m }}</th>{% endfor %}</tr>
+        <tr>{% for m in range(1, grid.matches + 1) %}<th scope="col">SV</th><th scope="col">Voto</th><th scope="col" title="{{ w.bonus_label }}">+</th><th scope="col" title="{{ w.malus_label }}">−</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+      {% for p in players %}
+        <tr>
+          <th scope="row" class="band band-{{ p.ruolo }}"><span class="pname">{{ p.name }}</span><br><span class="muted">{{ team_label(p.team) }}</span>
+            {% if p.roles|length > 1 %}<br><span class="tag tag-draft">ruoli diversi nelle formazioni</span>{% endif %}</th>
+          {% for m in range(1, grid.matches + 1) %}
+            {% set key = p.player_id ~ '_' ~ m %}
+            <td colspan="4" class="cellgroup">{{ cell_fields(key, values[key], p.name ~ ', partita ' ~ m, w) }}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+  {% endfor %}
+  <div class="submitbar"><div class="submitbar-inner">
+    <div class="submitbar-text"><strong>{{ grid.rows|length }} giocatori · {{ grid.matches }} partite</strong><span class="muted">Puoi salvare più volte e continuare dopo.</span></div>
+    <button class="btn" type="submit">Salva i voti</button>
+  </div></div>
+</form>
+{% endblock %}

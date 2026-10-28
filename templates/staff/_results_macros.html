@@ -1,0 +1,17 @@
+{# Casella di una cella (giocatore x partita): SV, voto, bonus, malus. `v` = valori correnti. #}
+{% macro cell_fields(key, v, label, w) -%}
+<label class="sv"><input type="checkbox" name="sv_{{ key }}" value="1" {% if v.sv %}checked{% endif %} aria-label="{{ label }}: non ha giocato"><span>SV</span></label>
+<input class="num" name="v_{{ key }}" value="{{ v.v }}" inputmode="decimal" size="4" maxlength="6" aria-label="{{ label }}: voto base" placeholder="voto">
+<input class="num cnt" name="b_{{ key }}" value="{{ v.b }}" inputmode="numeric" size="2" maxlength="2" aria-label="{{ label }}: {{ w.bonus_label|lower }}" placeholder="+">
+<input class="num cnt" name="m_{{ key }}" value="{{ v.m }}" inputmode="numeric" size="2" maxlength="2" aria-label="{{ label }}: {{ w.malus_label|lower }}" placeholder="−">
+{%- endmacro %}
+
+{% macro stat_text(s, w) -%}
+{%- if not s.played %}non ha giocato{% else %}voto {{ s.base_vote|num }}{% if s.bonus_count %}, {{ s.bonus_count }} × {{ w.bonus_label|lower }}{% endif %}{% if s.malus_count %}, {{ s.malus_count }} × {{ w.malus_label|lower }}{% endif %}{% endif -%}
+{%- endmacro %}
+
+{% macro state_tag(state) -%}
+{%- if state == 'entered' %}<span class="tag tag-active">inserito</span>
+{%- elif state == 'corrected' %}<span class="tag tag-draft">corretto</span>
+{%- else %}<span class="tag">da inserire</span>{% endif -%}
+{%- endmacro %}

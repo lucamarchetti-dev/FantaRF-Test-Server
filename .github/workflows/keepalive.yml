@@ -1,0 +1,27 @@
+name: Keep-alive (opzionale)
+
+# Il piano gratuito di Render addormenta il sito dopo 15 minuti senza visite; il risveglio richiede circa 1 minuto.
+# Se vuoi tenerlo sveglio durante la fase di test: Settings → Secrets and variables → Actions → Variables
+# → crea APP_URL con l'indirizzo del sito (es. https://fantarf-test.onrender.com).
+# Senza APP_URL questo workflow non fa nulla. Nessun dato va perso se il sito dorme: il database è replicato.
+#
+# ATTENZIONE, repository PRIVATO: GitHub Free include 2.000 minuti di Actions al mese e ogni esecuzione ne
+# consuma almeno 1. Un ping ogni 10 minuti sono circa 4.300 esecuzioni al mese: esaurirebbe la quota, e senza
+# minuti la CI non gira più (e con essa i deploy, che aspettano la CI verde). In un repository privato lascia
+# APP_URL vuota. In un repository pubblico le Actions sono gratuite.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    if: ${{ vars.APP_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /healthz
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: curl -fsS --max-time 90 --retry 2 "${APP_URL%/}/healthz"

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Formazione · {{ contest.name }}{% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('contests.detail', contest_id=contest.id) }}">← {{ contest.name }}</a></p>
+<h1>Componi la formazione</h1>
+<p class="lead-sm">{{ contest.name }} · scadenza <strong>{{ contest.closes_at|datelong }}</strong> <span class="muted">(tra {{ contest.closes_dt|timeleft }})</span></p>
+
+{% if current %}
+<p class="notice notice-ok" role="status">Hai già inviato la formazione (versione {{ current.version }}, il {{ current.submitted_at|localtime }}).
+  Se ne invii una nuova entro la scadenza, conterà soltanto l'ultima.</p>
+{% endif %}
+
+{% if errors %}
+<div class="notice notice-error" role="alert">
+  <p><strong>La formazione non è stata inviata.</strong> Correggi questi punti:</p>
+  <ul class="plain">{% for e in errors %}<li>{{ e.message }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% for w in warnings %}<p class="notice notice-warn">{{ w.message }}</p>{% endfor %}
+
+<noscript><p class="notice notice-warn">Per comporre la formazione serve JavaScript attivo nel browser.</p></noscript>
+
+<div class="builder" id="builder">
+  <div class="builder-main">
+    <form id="lineup-form" method="post" action="{{ url_for('contests.builder', contest_id=contest.id) }}" class="panel summary">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div id="hidden-ids"></div>
+      <h2 id="slots-h">La tua formazione</h2>
+      <ol id="slots" class="slots" aria-labelledby="slots-h"></ol>
+      <h3 class="small-h">Controlli</h3>
+      <ul id="rules" class="rules"></ul>
+      <div class="field">
+        <label for="team_name">Nome del FantaTeam <span class="muted">(facoltativo)</span></label>
+        <input id="team_name" name="team_name" maxlength="40" value="{{ team_name }}" autocomplete="off">
+      </div>
+    </form>
+
+    <section class="panel picker-panel" aria-labelledby="pick-h">
+      <h2 id="pick-h">Scegli i giocatori</h2>
+      <div class="filters-inline">
+        <div class="field grow"><label for="pq">Cerca per nome</label><input id="pq" type="search" autocomplete="off" placeholder="Nome o cognome"></div>
+        <div class="field"><label for="ps">Serie</label>
+          <select id="ps"><option value="">Tutte</option><option value="A">Serie A</option><option value="B">Serie B</option></select></div>
+        <div class="field"><label for="pr">Ruolo</label>
+          <select id="pr"><option value="">Tutti</option>{% for r in ['P','D','T','C','W','A'] %}<option value="{{ r }}">{{ r }} – {{ ROLE_LABELS[r] }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="pt">Squadra</label><select id="pt"><option value="">Tutte</option></select></div>
+      </div>
+      <p id="pcount" class="result-count" role="status"></p>
+      <ul id="results" class="picker"></ul>
+      <p><button type="button" id="more" class="btn btn-quiet" hidden>Mostra altri giocatori</button></p>
+    </section>
+  </div>
+
+  <div class="submitbar">
+    <div class="submitbar-inner">
+      <div class="submitbar-text">
+        <strong id="barcount">0 su 6</strong>
+        <span id="barhint" class="muted"></span>
+      </div>
+      <button type="submit" form="lineup-form" id="submit" class="btn" disabled>Invia formazione</button>
+    </div>
+  </div>
+</div>
+<p id="announce" class="sr-only" role="status"></p>
+
+<script type="application/json" id="builder-data">{{ {"players": players, "crests": crests, "selected": selected_ids, "onePerRole": contest.one_per_role == 1, "roles": ROLE_LABELS}|tojson }}</script>
+<script src="{{ url_for('static', filename='lineup.js') }}" defer></script>
+{% endblock %}

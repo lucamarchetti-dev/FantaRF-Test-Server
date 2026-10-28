@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_label %}
+{% block title %}Area staff{% endblock %}
+{% block content %}
+<h1>Area staff</h1>
+<div class="grid">
+  <section class="panel">
+    <h2>Stagione attiva</h2>
+    {% if season %}
+      <p><strong>{{ season['name'] }}</strong>{% if stats %} · {{ stats.selectable }} giocatori selezionabili su {{ stats.total }}{% endif %}</p>
+    {% else %}
+      <p>Nessuna stagione attiva.</p>
+    {% endif %}
+    <p><a href="{{ url_for('staff.seasons') }}">Gestisci le stagioni</a></p>
+  </section>
+  <section class="panel">
+    <h2>Listone</h2>
+    {% if last_import %}
+      <p>Ultima importazione: <strong>{{ last_import['filename'] }}</strong> ({{ status_label(last_import['status']) }}, {{ last_import['created_at']|localtime }}).</p>
+    {% else %}
+      <p>Nessuna importazione eseguita.</p>
+    {% endif %}
+    <p><a class="btn" href="{{ url_for('staff.import_start') }}">Importa il listone</a></p>
+  </section>
+  <section class="panel">
+    <h2>Concorsi</h2>
+    <p>Crea i concorsi, imposta le scadenze e controlla le formazioni inviate.</p>
+    <p><a class="btn" href="{{ url_for('staff_contests.index') }}">Gestisci i concorsi</a></p>
+  </section>
+  <section class="panel">
+    <h2>Punteggi</h2>
+    <p>Pesi di bonus e malus e parametri di calcolo.</p>
+    <p><a href="{{ url_for('staff_weights.weights') }}">Apri i punteggi</a></p>
+  </section>
+  <section class="panel">
+    <h2>Utenti</h2>
+    <p>{{ counts.users }} account attivi.</p>
+    <p><a href="{{ url_for('staff.users') }}">Gestisci gli utenti</a></p>
+  </section>
+  <section class="panel">
+    <h2>Strike</h2>
+    <p>Assegna e annulla gli strike mantenendo lo storico delle operazioni.</p>
+    <p><a class="btn" href="{{ url_for('staff_strikes.index') }}">Gestisci gli strike</a></p>
+  </section>
+  <section class="panel">
+    <h2>Registro operazioni</h2>
+    <p>Tutte le operazioni amministrative sono tracciate.</p>
+    <p><a href="{{ url_for('staff.audit_log') }}">Apri il registro</a></p>
+  </section>
+</div>
+{% endblock %}

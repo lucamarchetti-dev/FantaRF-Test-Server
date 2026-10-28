@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Punteggi{% endblock %}
+{% block content %}
+<h1>Punteggi <span class="h1-sub">stagione {{ season['name'] }}</span></h1>
+<p>Pesi dei bonus e dei malus per ruolo. {% if custom %}Sono stati <strong>modificati</strong> rispetto alla tabella del regolamento.{% else %}Sono quelli della <strong>tabella del regolamento</strong>.{% endif %}
+  I concorsi già pubblicati restano com'erano (ogni voto conserva i pesi con cui è stato calcolato), salvo che tu scelga di ricalcolarli.</p>
+{% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+
+<form method="post" class="panel">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <table class="table simple compact weights-table">
+    <thead><tr><th scope="col">Ruolo</th><th scope="col">Bonus</th><th scope="col">Peso</th><th scope="col">Malus</th><th scope="col">Peso</th></tr></thead>
+    <tbody>
+    {% for r in ['P','D','T','C','W','A'] %}
+      <tr>
+        <th scope="row" data-label="Ruolo">{{ r }} <span class="muted">{{ categories[r] }}</span></th>
+        <td data-label="Bonus"><input name="bl_{{ r }}" value="{{ form.get('bl_' ~ r, weights[r].bonus_label) }}" maxlength="40" required aria-label="Nome del bonus, ruolo {{ r }}"></td>
+        <td data-label="Peso +"><input class="num" name="bw_{{ r }}" value="{{ form.get('bw_' ~ r, weights[r].bonus_weight|num) }}" inputmode="decimal" size="5" required aria-label="Peso del bonus, ruolo {{ r }}"></td>
+        <td data-label="Malus"><input name="ml_{{ r }}" value="{{ form.get('ml_' ~ r, weights[r].malus_label) }}" maxlength="40" required aria-label="Nome del malus, ruolo {{ r }}"></td>
+        <td data-label="Peso −"><input class="num" name="mw_{{ r }}" value="{{ form.get('mw_' ~ r, weights[r].malus_weight|num) }}" inputmode="decimal" size="5" required aria-label="Peso del malus, ruolo {{ r }}"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="field">
+    <label for="sv_vote">Voto di una partita non giocata (SV)</label>
+    <input class="num" id="sv_vote" name="sv_vote" value="{{ form.get('sv_vote', sv_vote|num) }}" inputmode="decimal" size="5" required aria-describedby="sv_hint">
+    <p class="hint" id="sv_hint">Vale per ogni partita in cui il giocatore è «SV» (senza voto), quindi anche per chi non gioca nessuna partita del concorso. Tra 0 e 10, al massimo 3 decimali. Valore standard: {{ sv_default|num }}.</p>
+  </div>
+  <p class="hint">Tabella del regolamento: Portieri +0,3 / −0,5 · Difensori +0,25 / −0,25 · Esterni bassi +0,5 / −0,3 · Centrocampisti +0,5 / −0,1 · Esterni alti +1 / −0,4 · Attaccanti +0,6 / −0,2.</p>
+  {% if published %}
+  <div class="check-block">
+    <label class="check"><input type="checkbox" name="recalc_published" value="1" {% if form.get('recalc_published') %}checked{% endif %}> <span>Ricalcola anche i concorsi già pubblicati ({{ published|map(attribute='name')|join(', ') }})</span></label>
+    <div class="field"><label for="reason">Motivo (obbligatorio se ricalcoli)</label><input id="reason" name="reason" maxlength="300" value="{{ form.get('reason', '') }}"></div>
+  </div>
+  {% endif %}
+  <button class="btn" type="submit" data-confirm="Salvare i punteggi?">Salva i punteggi</button>
+</form>
+{% endblock %}

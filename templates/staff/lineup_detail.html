@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_macros.html" import lineup_table %}
+{% block title %}Formazione di {{ head.display_name }}{% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('staff_contests.detail', contest_id=contest.id) }}">← {{ contest.name }}</a></p>
+<h1>Formazione di {{ head.display_name }}</h1>
+<p class="muted">{{ contest.name }} · {{ head.username }} · {{ versions|length }} {{ 'versione' if versions|length == 1 else 'versioni' }}. Ai fini del concorso conta soltanto l'ultima.</p>
+{% for v in versions %}
+<section class="panel" aria-labelledby="v{{ v.version }}">
+  <h2 id="v{{ v.version }}">Versione {{ v.version }} {% if loop.first %}<span class="tag tag-active">in vigore</span>{% else %}<span class="tag">sostituita</span>{% endif %}</h2>
+  <p class="muted">Inviata il {{ v.submitted_at|localtime }}{% if v.fanta_team_name %} · FantaTeam «{{ v.fanta_team_name }}»{% endif %}</p>
+  {{ lineup_table(v.players) }}
+</section>
+{% endfor %}
+{% endblock %}

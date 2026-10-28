@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_macros.html" import role_badge %}
+{% from "staff/_results_macros.html" import cell_fields, stat_text, state_tag %}
+{% block title %}Dati e correzioni · {{ contest.name }}{% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('staff_results.overview', contest_id=contest.id) }}">← Risultati</a></p>
+<h1>Dati e correzioni</h1>
+<p class="muted">{{ contest.name }}. Per correggere un dato basta scrivere i nuovi valori e il <strong>motivo</strong>.
+  {% if contest.status == 'published' %}I punteggi pubblicati si ricalcolano subito e gli effetti restano nello storico.{% else %}Il motivo resta nello storico delle modifiche.{% endif %}</p>
+
+{% if missing %}
+<section class="panel" aria-labelledby="mis">
+  <h2 id="mis">Ancora da inserire ({{ missing|length }})</h2>
+  <p class="muted">{% for it in missing[:40] %}{{ it.player.name }} (partita {{ it.match_no }}){% if not loop.last %} · {% endif %}{% endfor %}{% if missing|length > 40 %} …{% endif %}</p>
+  {% if contest.status == 'calculating' %}<p><a class="btn btn-quiet" href="{{ url_for('staff_results.sheet', contest_id=contest.id) }}">Vai all'inserimento</a></p>{% endif %}
+</section>
+{% endif %}
+
+<section class="panel" aria-labelledby="ver">
+  <h2 id="ver">Dati inseriti ({{ entered|length }})</h2>
+  <table class="table simple compact">
+    <thead><tr><th scope="col">Giocatore</th><th scope="col">Partita</th><th scope="col">Dato</th><th scope="col">Stato</th><th scope="col"><span class="sr-only">Azione</span></th></tr></thead>
+    <tbody>{% for it in entered %}{% set p = it.player %}{% set w = weights[p.ruolo] %}
+      <tr><td data-label="Giocatore">{{ role_badge(p.ruolo) }} {{ p.name }}</td><td data-label="Partita">{{ it.match_no }}</td>
+        <td data-label="Dato">{{ stat_text(it.stat, w) }}</td>
+        <td data-label="Stato">{{ state_tag(it.state) }}{% if it.stat.note and it.state == 'corrected' %} <span class="muted">— {{ it.stat.note }}</span>{% endif %}</td>
+        <td data-label="" class="wide"><details><summary>Correggi</summary>
+          <form method="post" action="{{ url_for('staff_results.cell', contest_id=contest.id) }}" class="form cellform">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="player_id" value="{{ p.player_id }}"><input type="hidden" name="match_no" value="{{ it.match_no }}">
+            <div class="cellrow">{{ cell_fields(p.player_id ~ '_' ~ it.match_no, {'sv': not it.stat.played, 'v': (it.stat.base_vote or ''), 'b': (it.stat.bonus_count or ''), 'm': (it.stat.malus_count or '')}, p.name ~ ', partita ' ~ it.match_no, w) }}</div>
+            <div class="form-row"><div class="field grow"><label>Motivo</label><input name="reason" required minlength="3" maxlength="300"></div>
+              <div class="field actions-inline"><button class="btn btn-sm" type="submit">Registra la correzione</button></div></div>
+          </form></details></td></tr>
+    {% else %}<tr><td colspan="5">Nessun dato inserito finora.</td></tr>{% endfor %}</tbody>
+  </table>
+</section>
+
+{% if changes %}
+<section class="panel" aria-labelledby="mod">
+  <h2 id="mod">Modifiche registrate</h2>
+  <ul class="plain">{% for c in changes %}<li>{{ c.created_at|localtime }} · {{ c.user_name or 'sistema' }} · {{ c.full_name }} (partita {{ c.match_no }}) · {{ {'entry': 'inserito', 'edit': 'modificato', 'correction': 'corretto'}.get(c.action, c.action) }}{% if c.reason %} — «{{ c.reason }}»{% endif %}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

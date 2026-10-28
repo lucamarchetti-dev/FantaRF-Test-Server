@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_macros.html" import contest_tag, lineup_table, role_badge, team_label %}
+{% block title %}{{ contest.name }}{% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('contests.listing') }}">← Tutti i concorsi</a></p>
+<div class="contest-head">
+  <h1>{{ contest.name }}</h1> {{ contest_tag(contest) }}
+</div>
+{% if contest.status == 'draft' %}<p class="notice notice-warn">Bozza: i partecipanti non vedono ancora questo concorso.</p>{% endif %}
+
+<section class="panel" aria-labelledby="quando">
+  <h2 id="quando">Scadenza</h2>
+  <p><strong>{{ contest.closes_at|datelong }}</strong>
+    {% if contest.effective == 'open' %}<span class="muted">(tra {{ contest.closes_dt|timeleft }})</span>{% endif %}</p>
+  {% if contest.effective == 'scheduled' %}<p>Le formazioni si potranno inviare da {{ contest.opens_at|datelong }}.</p>{% endif %}
+  {% if contest.effective == 'closed' %}<p>Il concorso è chiuso: non si accettano più formazioni.</p>{% endif %}
+  <p class="muted">Se invii più volte la formazione entro la scadenza, conta soltanto l'ultima.</p>
+  <p class="muted">Regole: sei giocatori, tre di Serie A e tre di Serie B, tutti di squadre diverse{% if contest.one_per_role %}; in questo concorso serve anche <strong>un giocatore per ciascun ruolo</strong> (P, D, T, C, W, A){% endif %}.</p>
+</section>
+
+{% if contest.status == 'calculating' %}<p class="notice notice-warn" role="status">Il concorso è chiuso e i risultati sono in calcolo: il punteggio sarà visibile appena lo staff li pubblica.</p>{% endif %}
+
+{% if result %}
+<section class="panel result-panel" aria-labelledby="punti">
+  <h2 id="punti">Il tuo punteggio</h2>
+  <p class="score"><span class="score-num">{{ result.total|num }}</span> <span class="muted">punti · formazione, versione {{ result.version }}</span></p>
+  <p class="muted">Il punteggio è la somma dei voti dei sei giocatori. Il voto di ognuno è la media delle partite, con bonus e malus del suo ruolo.</p>
+  <table class="table simple compact lineup-table">
+    <thead><tr><th scope="col">Ruolo</th><th scope="col">Giocatore</th><th scope="col">Voto</th></tr></thead>
+    <tbody>
+    {% for p in result.players %}
+      <tr class="band band-{{ p.ruolo }}">
+        <td data-label="Ruolo">{{ role_badge(p.ruolo) }}</td>
+        <td data-label="Giocatore" class="wide"><span class="pname">{{ p.name }}</span> <span class="muted">{{ team_label(p.team) }}</span>
+          {% if p.lines %}<details><summary>Come si è calcolato</summary><ul class="plain">{% for line in p.lines %}<li>{{ line }}</li>{% endfor %}</ul></details>{% endif %}</td>
+        <td data-label="Voto"><strong>{{ p.vote|num }}</strong>{% if p.source == 'manual' %} <span class="tag tag-draft">voto assegnato dallo staff</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if contest.info %}
+<section class="panel" aria-labelledby="info-h">
+  <h2 id="info-h">Informazioni della settimana</h2>
+  <p class="prewrap">{{ contest.info }}</p>
+</section>
+{% endif %}
+
+<section class="panel" aria-labelledby="mia">
+  <h2 id="mia">La tua formazione</h2>
+  {% if not g.user %}
+    <p><a href="{{ url_for('auth.login', next=url_for('contests.builder', contest_id=contest.id)) }}">Accedi</a> per inviare la tua formazione.</p>
+  {% elif excluded %}
+    <p class="notice notice-warn">Non sei ammesso a partecipare a questa stagione. Contatta lo staff.</p>
+  {% else %}
+    {% if lineup %}
+      <p class="state state-ok"><span aria-hidden="true">✓</span> Formazione inviata: <strong>versione {{ lineup.version }}</strong>, registrata il {{ lineup.submitted_at|localtime }}.
+        {% if lineup.fanta_team_name %}FantaTeam: <strong>{{ lineup.fanta_team_name }}</strong>.{% endif %}</p>
+      {{ lineup_table(lineup.players) }}
+    {% else %}
+      <p class="state state-todo"><span aria-hidden="true">○</span> Non hai inviato nessuna formazione per questo concorso.</p>
+    {% endif %}
+    {% if contest.effective == 'open' %}
+      <p><a class="btn" href="{{ url_for('contests.builder', contest_id=contest.id) }}">{{ 'Modifica la formazione' if lineup else 'Componi la formazione' }}</a></p>
+    {% endif %}
+  {% endif %}
+</section>
+
+{% if g.user and g.user['role'] == 'staff' %}
+<p><a class="btn btn-quiet" href="{{ url_for('staff_contests.detail', contest_id=contest.id) }}">Gestisci il concorso (staff)</a></p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_macros.html" import contest_tag %}
+{% block title %}Concorsi (staff){% endblock %}
+{% block content %}
+<h1>Concorsi{% if season %} <span class="h1-sub">stagione {{ season['name'] }}</span>{% endif %}</h1>
+{% if not season %}
+  <p class="notice notice-warn">Non c'è una stagione attiva. <a href="{{ url_for('staff.seasons') }}">Creane e attivane una</a> per gestire i concorsi.</p>
+{% else %}
+<table class="table simple">
+  <thead><tr><th scope="col">Concorso</th><th scope="col">Stato</th><th scope="col">Scadenza</th><th scope="col">Formazioni</th></tr></thead>
+  <tbody>
+  {% for c in contests %}
+    <tr>
+      <td data-label="Concorso"><a href="{{ url_for('staff_contests.detail', contest_id=c.id) }}"><strong>{{ c.name }}</strong></a></td>
+      <td data-label="Stato">{{ contest_tag(c) }}</td>
+      <td data-label="Scadenza">{{ c.closes_at|localtime }}</td>
+      <td data-label="Formazioni">{{ c.lineups }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">Nessun concorso: creane uno qui sotto.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<section class="panel" aria-labelledby="nuovo">
+  <h2 id="nuovo">Nuovo concorso</h2>
+  <p class="muted">Nasce in bozza, invisibile ai partecipanti. Lo apri tu quando è pronto. Gli orari sono nel fuso Europe/Rome.</p>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" class="form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <div class="field"><label for="number">Numero</label><input id="number" name="number" type="number" min="1" required value="{{ form.get('number', '') }}"></div>
+      <div class="field grow"><label for="name">Nome <span class="muted">(facoltativo, es. «Concorso #11»)</span></label><input id="name" name="name" maxlength="60" value="{{ form.get('name', '') }}"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label for="opens_at">Apertura <span class="muted">(facoltativa)</span></label><input id="opens_at" name="opens_at" type="datetime-local" value="{{ form.get('opens_at', '') }}"></div>
+      <div class="field"><label for="closes_at">Scadenza</label><input id="closes_at" name="closes_at" type="datetime-local" required value="{{ form.get('closes_at', '') }}" aria-describedby="close-hint"></div>
+    </div>
+    <p id="close-hint" class="hint">Proposta: il prossimo lunedì alle 20:30, come da regolamento. Puoi cambiarla.</p>
+    <div class="field"><label for="matches_count">Partite da valutare</label>
+      <select id="matches_count" name="matches_count" aria-describedby="mc-hint"><option value="2" {% if form.get('matches_count', '2')|string == '2' %}selected{% endif %}>2</option><option value="3" {% if form.get('matches_count')|string == '3' %}selected{% endif %}>3</option></select>
+      <p id="mc-hint" class="hint">Di solito due; alcuni concorsi hanno tre partite (es. 5 e 6 della S13). Il voto è la media delle partite.</p></div>
+    <div class="field">
+      <label for="info">Informazioni e partite della settimana</label>
+      <textarea id="info" name="info" rows="5" maxlength="5000">{{ form.get('info', '') }}</textarea>
+    </div>
+    <label class="check"><input type="checkbox" name="one_per_role" value="1" {% if form.get('one_per_role') %}checked{% endif %}>
+      Richiedi un giocatore per ogni ruolo (P, D, T, C, W, A)</label>
+    <p class="hint">Il regolamento lo mostra solo come esempio: attivalo soltanto se lo staff ha confermato che è obbligatorio.</p>
+    <div><button class="btn" type="submit">Crea il concorso in bozza</button></div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,34 @@
+# Blueprint di Render per il server di TEST di FantaRF.
+# Il deploy parte solo se la CI di GitHub (.github/workflows/ci.yml) è verde.
+services:
+  - type: web
+    name: fantarf-test
+    runtime: docker
+    plan: free              # Render gratuito: si addormenta dopo 15 min senza visite, disco NON persistente
+    region: frankfurt
+    autoDeployTrigger: checksPass
+    healthCheckPath: /healthz
+    envVars:
+      # --- App ---
+      - key: FANTAPG_SECRET_KEY
+        generateValue: true          # generata da Render e conservata: le sessioni sopravvivono ai riavvii
+      - key: FANTAPG_SECURE_COOKIES
+        value: "1"
+      - key: FANTAPG_TRUST_PROXY
+        value: "1"
+      # --- Primo accesso staff (usato solo se nel database non c'è ancora nessuno staff) ---
+      - key: FANTAPG_BOOTSTRAP_ADMIN_USER
+        sync: false
+      - key: FANTAPG_BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      # --- Persistenza del database (Litestream -> storage S3-compatibile) ---
+      - key: LITESTREAM_BUCKET
+        sync: false
+      - key: LITESTREAM_ENDPOINT
+        sync: false
+      - key: LITESTREAM_REGION
+        sync: false
+      - key: LITESTREAM_ACCESS_KEY_ID
+        sync: false
+      - key: LITESTREAM_SECRET_ACCESS_KEY
+        sync: false

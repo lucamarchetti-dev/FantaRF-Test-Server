@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% from "_macros.html" import contest_tag, role_badge %}
+{% from "staff/_results_macros.html" import state_tag %}
+{% block title %}Risultati · {{ contest.name }}{% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('staff_contests.detail', contest_id=contest.id) }}">← {{ contest.name }}</a></p>
+<div class="contest-head"><h1>Risultati</h1> {{ contest_tag(contest) }}</div>
+<p class="muted">{{ contest.name }} · {{ contest.matches_count }} {{ 'partita' if contest.matches_count == 1 else 'partite' }} · {{ lineups_count }} formazioni · {{ needed }} giocatori da valutare</p>
+
+<ol class="stepper" aria-label="Avanzamento">
+  <li {% if contest.status in ('open','draft') %}aria-current="step"{% endif %} class="{{ 'done' if contest.effective not in ('draft','open','scheduled') else '' }}">Concorso chiuso</li>
+  <li {% if contest.status == 'calculating' %}aria-current="step"{% endif %} class="{{ 'done' if contest.status == 'published' else '' }}">Voti e calcolo</li>
+  <li {% if contest.status == 'published' %}aria-current="step"{% endif %}>Pubblicato</li>
+</ol>
+
+{% if not in_results %}
+<section class="panel">
+  {% if contest.effective == 'closed' %}
+    <h2>Pronto per i risultati</h2>
+    {% if lineups_count %}
+    <p>Il concorso è chiuso: ci sono {{ lineups_count }} formazioni con {{ needed }} giocatori da valutare. Avvia la fase risultati per aprire l’inserimento dei voti; dopo l’avvio non si potranno più riaprire le formazioni.</p>
+    <form method="post" action="{{ url_for('staff_results.start', contest_id=contest.id) }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn" type="submit" data-confirm="Avviare la fase risultati e abilitare l’inserimento dei voti? Il concorso non potrà più essere riaperto.">Avvia i risultati</button>
+    </form>
+    {% else %}<p>Nessuna formazione inviata: non c'è nulla da valutare.</p>{% endif %}
+  {% else %}
+    <p>I risultati si avviano a concorso chiuso (alla scadenza o chiudendolo dalla sua pagina).</p>
+  {% endif %}
+</section>
+{% else %}
+
+{% if stale %}
+<p class="notice notice-warn" role="status">I punteggi salvati non sono aggiornati rispetto ai dati: premi «Calcola i punteggi» (la pubblicazione li ricalcola comunque).</p>
+{% endif %}
+
+<section class="panel" aria-labelledby="stato">
+  <h2 id="stato">Stato dei dati</h2>
+  <dl class="facts">
+    <div><dt>Celle inserite</dt><dd>{{ grid['counts'].get('pending', 0) + grid['counts'].get('conflict', 0) + grid['counts'].get('verified', 0) + grid['counts'].get('corrected', 0) }} / {{ grid.get('total_cells', 0) }}</dd></div>
+    <div class="{{ 'bad' if grid.counts.missing and contest.status == 'calculating' else '' }}"><dt>Da inserire</dt><dd>{{ grid['counts'].get('missing', 0) }}</dd></div>
+    {% if grid['counts'].get('corrected', 0) %}<div><dt>Corrette dopo la pubblicazione</dt><dd>{{ grid['counts'].get('corrected', 0) }}</dd></div>{% endif %}
+  </dl>
+  <div class="actions">
+    {% if contest.status == 'calculating' %}
+      <a class="btn" href="{{ url_for('staff_results.sheet', contest_id=contest.id) }}">Inserisci i voti</a>
+    {% endif %}
+    <a class="btn btn-quiet" href="{{ url_for('staff_results.data', contest_id=contest.id) }}">Dati e correzioni</a>
+    {% if contest.status == 'calculating' %}
+    <form method="post" action="{{ url_for('staff_results.calculate', contest_id=contest.id) }}" class="inline">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn btn-quiet" type="submit">Calcola anteprima</button></form>
+    <form method="post" action="{{ url_for('staff_results.publish', contest_id=contest.id) }}" class="inline">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn" type="submit" data-confirm="Confermare i voti e completare il calcolo? I risultati saranno pubblicati solo se tutti i dati necessari sono validi.">Conferma voti e completa il calcolo</button></form>
+    {% endif %}
+  </div>
+  {% if contest.status == 'published' %}
+  <details class="issue-group"><summary>Ricalcola con i pesi attuali</summary>
+    <form method="post" action="{{ url_for('staff_results.recalculate', contest_id=contest.id) }}" class="form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <p class="hint">Serve solo se hai cambiato i pesi dopo la pubblicazione: i punteggi pubblicati non cambiano da soli.</p>
+      <div class="form-row"><div class="field grow"><label for="rr">Motivo</label><input id="rr" name="reason" required minlength="3" maxlength="300"></div>
+        <div class="field actions-inline"><button class="btn btn-quiet btn-sm" type="submit" data-confirm="Ricalcolare il concorso con i pesi attuali?">Ricalcola</button></div></div>
+    </form>
+  </details>
+  {% endif %}
+  <p class="hint">Formula e pesi: <a href="{{ url_for('staff_weights.weights') }}">Punteggi</a>.</p>
+</section>
+
+{% set incomplete = grid.rows|rejectattr('complete')|list %}
+{% if incomplete %}
+<section class="panel" aria-labelledby="mancanti">
+  <h2 id="mancanti">Giocatori senza dati completi ({{ incomplete|length }})</h2>
+  <p>Finché mancano i dati di tutte le partite, il giocatore non ha voto e le formazioni che lo contengono restano incomplete.</p>
+  <ul class="plain">{% for p in incomplete %}<li>{{ role_badge(p.ruolo) }} {{ p.name }} <span class="muted">— {% for c in p.cells %}partita {{ c.match_no }}: {{ state_tag(c.state) }} {% endfor %}</span></li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+{% if scores and scores.lineups %}
+<section class="panel" aria-labelledby="formazioni">
+  <h2 id="formazioni">Punteggi delle formazioni</h2>
+  <p class="muted">Ordine provvisorio per punteggio, <strong>senza spareggi</strong> (il criterio non è ancora deciso). Le classifiche vere arrivano con la Fase 4.</p>
+  <table class="table simple compact">
+    <thead><tr><th scope="col">Partecipante</th><th scope="col">Versione</th><th scope="col">Punteggio</th></tr></thead>
+    <tbody>
+    {% for l in scores.lineups %}
+      <tr><td data-label="Partecipante"><a href="{{ url_for('staff_contests.lineup_detail', contest_id=contest.id, lineup_id=l.lineup_id) }}">{{ l.display_name }}</a></td>
+          <td data-label="Versione">{{ l.version }}</td>
+          <td data-label="Punteggio">{% if l.total is not none %}<strong>{{ l.total|num }}</strong>{% else %}<span class="tag tag-off">incompleta</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if scores and scores.players %}
+<section class="panel" aria-labelledby="voti">
+  <h2 id="voti">Voti dei giocatori</h2>
+  <table class="table simple compact">
+    <thead><tr><th scope="col">Giocatore</th><th scope="col">Voto</th><th scope="col">Origine</th><th scope="col">Come si è calcolato</th></tr></thead>
+    <tbody>
+    {% for p in scores.players %}
+      <tr class="band band-{{ p.ruolo }}">
+        <td data-label="Giocatore">{{ role_badge(p.ruolo) }} <span class="pname">{{ p.full_name }}</span></td>
+        <td data-label="Voto"><strong>{{ p.vote|num }}</strong></td>
+        <td data-label="Origine">{% if p.source == 'manual' %}<span class="tag tag-draft">inserito a mano</span>{% else %}<span class="tag">calcolato</span>{% endif %}</td>
+        <td data-label="Calcolo" class="wide">
+          <details><summary>Dettaglio</summary>
+            <ul class="plain">{% for line in p.breakdown.lines %}<li>{{ line }}</li>{% endfor %}</ul>
+            <form method="post" action="{{ url_for('staff_results.override', contest_id=contest.id) }}" class="form override-form">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="player_id" value="{{ p.player_id }}">
+              {% if p.source == 'manual' %}
+                <input type="hidden" name="op" value="clear">
+                {% if contest.status == 'published' %}<div class="field"><label>Motivo</label><input name="reason" required minlength="5" maxlength="300"></div>{% endif %}
+                <button class="btn btn-quiet btn-sm" type="submit">Togli il voto manuale</button>
+              {% else %}
+                <input type="hidden" name="op" value="set">
+                <div class="form-row">
+                  <div class="field"><label>Voto finale a mano</label><input name="vote" required inputmode="decimal" size="5"></div>
+                  <div class="field grow"><label>Motivo (obbligatorio)</label><input name="reason" required minlength="5" maxlength="300"></div>
+                  <div class="field actions-inline"><button class="btn btn-quiet btn-sm" type="submit" data-confirm="Sostituire il voto calcolato con un voto inserito a mano?">Imposta</button></div>
+                </div>
+              {% endif %}
+            </form>
+          </details>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endif %}
+
+{% if runs %}
+<section class="panel" aria-labelledby="storico">
+  <h2 id="storico">Storico operazioni</h2>
+  <ul class="plain">{% for r in runs %}<li>{{ r.created_at|localtime }} · {{ r.user_name or 'sistema' }} · <code>{{ r.kind }}</code>
+    {% if r.kind == 'recalculate' %}— «{{ r.summary.reason }}»
+      {% set fx = r.summary.effects %}
+      {% if fx and (fx.lineups or fx.players) %}<details><summary>Effetti: {{ fx.players|length }} voti, {{ fx.lineups|length }} punteggi</summary>
+        <ul class="plain">{% for c in fx.players %}<li>{{ c.name }}: {{ c.old|num }} → {{ c.new|num }}</li>{% endfor %}{% for c in fx.lineups %}<li><strong>{{ c.name }}</strong>: {{ c.old|num }} → {{ c.new|num }}</li>{% endfor %}</ul></details>
+      {% else %}<span class="muted">nessun voto o punteggio è cambiato</span>{% endif %}
+    {% endif %}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

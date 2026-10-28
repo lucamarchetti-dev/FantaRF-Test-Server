@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><title>Fanta PG · demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body>
+<p id="m">Reindirizzamento…</p>
+<script>
+// Un collegamento diretto a una pagina dell'app (…/app/giocatori) arriva qui se il service worker non è ancora attivo:
+// si passa dalla pagina principale, che lo attiva e poi riapre la pagina richiesta.
+(function () {
+  var p = location.pathname, i = p.indexOf('/app/');
+  if (i >= 0 && !sessionStorage.getItem('fantarf-404')) {
+    sessionStorage.setItem('fantarf-404', '1');
+    location.replace(p.slice(0, i + 1) + '?go=' + encodeURIComponent(p.slice(i + 4) + location.search));
+  } else {
+    document.getElementById('m').textContent = 'Pagina non trovata. Apri la demo dalla pagina principale.';
+  }
+})();
+</script></body></html>

@@ -1,0 +1,3 @@
+# Gli script di avvio devono avere sempre a-capo Unix, anche se il repo viene clonato su Windows.
+*.sh text eol=lf
+Dockerfile text eol=lf

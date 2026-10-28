@@ -1,0 +1,51 @@
+name: Demo su GitHub Pages
+
+# Pubblica una DEMO che gira interamente nel browser (Python in WebAssembly, database nel browser di chi la usa).
+# Prima volta: Settings → Pages → Build and deployment → Source: «GitHub Actions».
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Costruisci il sito
+    runs-on: ubuntu-latest
+    steps:
+      # Il repository È il pacchetto Python "FantaRF": va estratto in una cartella con quel nome.
+      - uses: actions/checkout@v4
+        with:
+          path: FantaRF
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: FantaRF/requirements.txt
+      - run: pip install -r FantaRF/requirements.txt
+      - name: Prove del ponte (senza browser)
+        run: python -m FantaRF.pages.test_bridge
+      - name: Assembla il sito (database demo, app, librerie Python)
+        run: python -m FantaRF.pages.build --out site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: Pubblica
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_macros.html" import role_badge, serie_badge, team_label, pagination %}
+{% block title %}Giocatori{% endblock %}
+{% block content %}
+<h1>Listone giocatori{% if season %} <span class="h1-sub">stagione {{ season['name'] }}</span>{% endif %}</h1>
+
+{% if not season %}
+  <p>Non c'è ancora una stagione attiva, quindi il listone non è disponibile.</p>
+{% else %}
+<form method="get" class="filters" role="search" aria-label="Filtra i giocatori">
+  {% if is_staff and query_args.get('stagione') %}<input type="hidden" name="stagione" value="{{ season['id'] }}">{% endif %}
+  <div class="field grow">
+    <label for="q">Cerca per nome</label>
+    <input id="q" name="q" type="search" value="{{ filters.q }}" placeholder="Nome o cognome" autocomplete="off">
+  </div>
+  <div class="field">
+    <label for="serie">Serie</label>
+    <select id="serie" name="serie">
+      <option value="">Tutte</option>
+      <option value="A" {% if filters.serie == 'A' %}selected{% endif %}>Serie A</option>
+      <option value="B" {% if filters.serie == 'B' %}selected{% endif %}>Serie B</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="ruolo">Ruolo</label>
+    <select id="ruolo" name="ruolo">
+      <option value="">Tutti</option>
+      {% for r in ['P','D','T','C','W','A'] %}
+      <option value="{{ r }}" {% if filters.ruolo == r %}selected{% endif %}>{{ r }} – {{ ROLE_LABELS[r] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="squadra">Squadra</label>
+    <select id="squadra" name="squadra">
+      <option value="">Tutte</option>
+      {% for serie_code in ['A','B'] %}
+      <optgroup label="Serie {{ serie_code }}">
+        {% for t in teams if t.serie == serie_code %}
+        <option value="{{ t.name }}" {% if filters.squadra == t.name %}selected{% endif %}>{{ t.name }}</option>
+        {% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+  </div>
+  {% if is_staff %}
+  <div class="field">
+    <label for="stato">Stato</label>
+    <select id="stato" name="stato">
+      <option value="" {% if filters.stato == 'active' %}selected{% endif %}>Selezionabili</option>
+      <option value="inactive" {% if filters.stato == 'inactive' %}selected{% endif %}>Non selezionabili</option>
+      <option value="all" {% if filters.stato == 'all' %}selected{% endif %}>Tutti</option>
+    </select>
+  </div>
+  {% endif %}
+  <div class="field actions-inline">
+    <button class="btn" type="submit">Cerca</button>
+    <a class="btn btn-quiet" href="{{ url_for('players.listing', **({'stagione': season['id']} if is_staff and query_args.get('stagione') else {})) }}">Azzera</a>
+  </div>
+</form>
+
+<p class="result-count" role="status">
+  {% if result.total == 0 %}Nessun giocatore trovato.{% elif result.total == 1 %}1 giocatore trovato.{% else %}{{ result.total }} giocatori trovati.{% endif %}
+</p>
+
+{% if result.total == 0 and not filters.q and not filters.serie and not filters.ruolo and not filters.squadra %}
+  <p>Il listone di questa stagione è vuoto.{% if is_staff %} <a href="{{ url_for('staff.import_start') }}">Importa il file Excel</a> per iniziare.{% endif %}</p>
+{% elif result.total == 0 %}
+  <p>Prova a cambiare o togliere qualche filtro.</p>
+{% else %}
+<table class="table players">
+  <thead>
+    <tr><th scope="col">Giocatore</th><th scope="col">Ruolo</th><th scope="col">Squadra</th><th scope="col" class="col-serie">Serie</th>{% if is_staff %}<th scope="col">Stato</th>{% endif %}</tr>
+  </thead>
+  <tbody>
+  {% for p in result.rows %}
+    <tr class="band band-{{ p['ruolo'] }}">
+      <td data-label="Giocatore"><span class="pname">{{ p['full_name'] }}</span> <span class="pid">#{{ p['external_id'] }}</span></td>
+      <td data-label="Ruolo"><span class="role-dot role-{{ p['ruolo'] }}" title="{{ ROLE_LABELS[p['ruolo']] }}"><span aria-hidden="true">{{ p['ruolo'] }}</span><span class="sr-only">{{ ROLE_LABELS[p['ruolo']] }}</span></span> <span class="role-text">{{ ROLE_LABELS[p['ruolo']] }}</span></td>
+      <td data-label="Squadra">{{ team_label(p['team']) }}</td>
+      <td data-label="Serie" class="col-serie">{{ serie_badge(p['serie']) }}</td>
+      {% if is_staff %}
+      <td data-label="Stato">
+        <form method="post" action="{{ url_for('staff.player_toggle', psd_id=p['psd_id']) }}" class="inline">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}">
+          {% if p['selectable'] %}
+            <input type="hidden" name="selectable" value="0">
+            <button class="btn btn-quiet btn-sm" type="submit" data-confirm="Rendere {{ p['full_name'] }} non selezionabile?">Disattiva</button>
+          {% else %}
+            <span class="tag tag-off">Non selezionabile</span>
+            <input type="hidden" name="selectable" value="1">
+            <button class="btn btn-quiet btn-sm" type="submit">Riattiva</button>
+          {% endif %}
+        </form>
+      </td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ pagination('players.listing', result.page, result.pages, query_args) }}
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_label %}
+{% block title %}Report importazione{% endblock %}
+{% block content %}
+<h1>Importazione #{{ batch['id'] }}</h1>
+<p class="muted">{{ batch['filename'] }} · foglio «{{ batch['sheet'] }}» · stagione <strong>{{ batch['season_name'] }}</strong> · <span class="tag tag-{{ batch['status'] }}">{{ status_label(batch['status']) }}</span></p>
+{% if summary %}
+<section class="panel">
+  <h2>Esito</h2>
+  <p>Applicata il {{ batch['applied_at']|localtime }}{% if batch['user_name'] %} da {{ batch['user_name'] }}{% endif %}.</p>
+  <dl class="facts">
+    <div><dt>Righe lette</dt><dd>{{ summary.rows_read }}</dd></div>
+    <div><dt>Importate (nuove)</dt><dd>{{ summary.new }}</dd></div>
+    <div><dt>Aggiornate</dt><dd>{{ summary.changed }}</dd></div>
+    <div><dt>Invariate</dt><dd>{{ summary.unchanged }}</dd></div>
+    <div class="{{ 'bad' if summary.rows_rejected else '' }}"><dt>Scartate</dt><dd>{{ summary.rows_rejected }}</dd></div>
+  </dl>
+  {% if summary.absent_from_file %}<p class="muted">{{ summary.absent_from_file }} giocatori del listone non erano nel file e non sono stati toccati.</p>{% endif %}
+</section>
+{% if summary.issues %}
+<section class="panel">
+  <h2>Righe scartate</h2>
+  {% for g_ in summary.issues_by_code %}<p><strong>{{ g_.count }}</strong> · {{ g_.label }}</p>{% endfor %}
+  <details class="issue-group"><summary>Elenco completo{% if summary.issues_truncated %} (prime {{ summary.issues|length }}){% endif %}</summary>
+    <table class="table simple compact">
+      <thead><tr><th scope="col">Riga</th><th scope="col">Motivo</th><th scope="col">Contenuto letto</th></tr></thead>
+      <tbody>
+      {% for i in summary.issues %}
+        <tr><td data-label="Riga">{{ i.row }}</td><td data-label="Motivo">{{ i.reasons|join('; ') }}</td><td data-label="Contenuto">{{ i.raw.id }} | {{ i.raw.name }} | {{ i.raw.serie }} | {{ i.raw.ruolo }} | {{ i.raw.squadra }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </details>
+</section>
+{% endif %}
+{% elif batch['status'] == 'failed' %}
+  <p class="notice notice-error" role="alert">Importazione non riuscita: nessun dato è stato modificato.</p>
+{% else %}
+  <p>Questa importazione è stata annullata: il listone non è stato modificato.</p>
+{% endif %}
+<p><a class="btn btn-quiet" href="{{ url_for('staff.import_start') }}">Torna alle importazioni</a> <a class="btn" href="{{ url_for('players.listing') }}">Vai al listone</a></p>
+{% endblock %}

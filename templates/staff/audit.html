@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination %}
+{% block title %}Registro operazioni{% endblock %}
+{% block content %}
+<h1>Registro operazioni</h1>
+<p class="muted">{{ total }} operazioni registrate, dalla più recente.</p>
+<table class="table simple">
+  <thead><tr><th scope="col">Quando</th><th scope="col">Chi</th><th scope="col">Operazione</th><th scope="col">Dettagli</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td data-label="Quando">{{ r['created_at']|localtime }}</td>
+      <td data-label="Chi">{{ r['user_name'] or 'Sistema / terminale' }}</td>
+      <td data-label="Operazione"><code>{{ r['action'] }}</code>{% if r['entity'] %} <span class="muted">{{ r['entity'] }} #{{ r['entity_id'] }}</span>{% endif %}</td>
+      <td data-label="Dettagli" class="details-cell">{{ r['details_json'] or '' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">Nessuna operazione registrata.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ pagination('staff.audit_log', page, pages, {}) }}
+{% endblock %}

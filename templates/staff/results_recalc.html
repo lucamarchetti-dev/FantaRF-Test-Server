@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Ricalcolo · {{ contest.name }}{% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('staff_results.overview', contest_id=contest.id) }}">← Risultati</a></p>
+<h1>Ricalcolo dopo le correzioni</h1>
+<p class="muted">{{ contest.name }}. Questa è un'<strong>anteprima</strong>: finché non confermi, i partecipanti vedono i punteggi pubblicati.</p>
+
+{% if not prev.stale %}
+  <p class="notice notice-ok" role="status">Nessuna modifica da ricalcolare: i punteggi pubblicati sono aggiornati.</p>
+{% elif not prev.result.complete %}
+  <p class="notice notice-error" role="alert">Dopo le correzioni mancano dati per {{ prev.result.incomplete|length }} giocatori: il ricalcolo non può essere applicato.</p>
+{% else %}
+  {% set d = prev.diff %}
+  <section class="panel" aria-labelledby="eff">
+    <h2 id="eff">Effetti</h2>
+    {% if not d.players and not d.lineups %}
+      <p>I dati sono cambiati ma nessun voto o punteggio risulta diverso. Puoi comunque confermare per allineare lo stato.</p>
+    {% endif %}
+    {% if d.players %}
+    <h3 class="small-h">Voti dei giocatori che cambiano ({{ d.players|length }})</h3>
+    <table class="table simple compact"><thead><tr><th scope="col">Giocatore</th><th scope="col">Prima</th><th scope="col">Dopo</th></tr></thead>
+      <tbody>{% for c in d.players %}<tr><td data-label="Giocatore">{{ c.name }}</td><td data-label="Prima">{{ c.old|num }}</td><td data-label="Dopo"><strong>{{ c.new|num }}</strong></td></tr>{% endfor %}</tbody></table>
+    {% endif %}
+    {% if d.lineups %}
+    <h3 class="small-h">Punteggi delle formazioni che cambiano ({{ d.lineups|length }})</h3>
+    <table class="table simple compact"><thead><tr><th scope="col">Partecipante</th><th scope="col">Prima</th><th scope="col">Dopo</th></tr></thead>
+      <tbody>{% for c in d.lineups %}<tr><td data-label="Partecipante">{{ c.name }}</td><td data-label="Prima">{{ c.old|num }}</td><td data-label="Dopo"><strong>{{ c.new|num }}</strong></td></tr>{% endfor %}</tbody></table>
+    {% endif %}
+    <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn" type="submit" data-confirm="Applicare il ricalcolo? I partecipanti vedranno i nuovi punteggi.">Applica il ricalcolo</button></form>
+  </section>
+{% endif %}
+{% endblock %}

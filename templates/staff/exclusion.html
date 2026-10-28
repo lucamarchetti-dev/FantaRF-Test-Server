@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Escludi dalla stagione{% endblock %}
+{% block content %}
+<section class="narrow">
+  <h1>Escludi {{ user['display_name'] }}</h1>
+  <p>L'utente non potrà inviare formazioni nella stagione <strong>{{ season['name'] }}</strong> (es. per sanzioni). L'account resta attivo e potrà essere riammesso in qualsiasi momento. Le formazioni già inviate non vengono toccate.</p>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" class="form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="field"><label for="reason">Motivo (visibile nel registro)</label><input id="reason" name="reason" required minlength="3" maxlength="300" value="{{ form.get('reason', '') }}"></div>
+    <div class="actions"><button class="btn" type="submit">Escludi dalla stagione</button><a class="btn btn-quiet" href="{{ url_for('staff.users') }}">Annulla</a></div>
+  </form>
+</section>
+{% endblock %}

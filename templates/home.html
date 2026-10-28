@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_macros.html" import contest_tag %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Il fantacalcio di RoleFootball</h1>
+  {% if season %}
+    <p class="lead">Stagione <strong>{{ season['name'] }}</strong>.<br> Sei giocatori ogni settimana: tre di Serie A, tre di Serie B, tutti di squadre diverse.</p>
+  {% else %}
+    <p class="lead">Nessuna stagione è ancora attiva.{% if g.user and g.user['role'] == 'staff' %} Creane e attivane una dall'<a href="{{ url_for('staff.seasons') }}">area staff</a>.{% endif %}</p>
+  {% endif %}
+  {% if not g.user %}<p class="actions"><a class="btn" href="{{ url_for('auth.login') }}">Accedi per giocare</a> <a class="btn btn-quiet" href="{{ url_for('players.listing') }}">Consulta il listone</a></p>{% endif %}
+</section>
+
+{% if season %}
+<section aria-labelledby="oc-h">
+  <h2 id="oc-h">{{ 'Concorsi in corso' if open_contests else 'Concorsi' }}</h2>
+  {% for c in open_contests %}
+  <article class="panel contest-card">
+    <div class="contest-head">
+      <h3><a href="{{ url_for('contests.detail', contest_id=c.id) }}">{{ c.name }}</a></h3>
+      {{ contest_tag(c) }}
+    </div>
+    {% if c.effective == 'scheduled' %}
+      <p>Apre {{ c.opens_at|datelong }}.</p>
+    {% endif %}
+    <p>Scadenza: <strong>{{ c.closes_at|datelong }}</strong> <span class="muted">(tra {{ c.closes_dt|timeleft }})</span></p>
+    {% if g.user %}
+      {% set m = mine.get(c.id) %}
+      {% if m %}
+        <p class="state state-ok"><span aria-hidden="true">✓</span> Formazione inviata: versione {{ m.version }}, il {{ m.submitted_at|localtime }}.</p>
+        {% if c.effective == 'open' %}<p><a class="btn btn-quiet" href="{{ url_for('contests.builder', contest_id=c.id) }}">Modifica la formazione</a></p>{% endif %}
+      {% else %}
+        <p class="state state-todo"><span aria-hidden="true">○</span> Non hai ancora inviato la formazione.</p>
+        {% if c.effective == 'open' %}<p><a class="btn" href="{{ url_for('contests.builder', contest_id=c.id) }}">Componi la formazione</a></p>{% endif %}
+      {% endif %}
+    {% else %}
+      <p><a class="btn" href="{{ url_for('auth.login', next=url_for('contests.builder', contest_id=c.id)) }}">Accedi per inviare la formazione</a></p>
+    {% endif %}
+  </article>
+  {% else %}
+  <p class="panel">Nessun concorso aperto in questo momento. <a href="{{ url_for('contests.listing') }}">Vedi tutti i concorsi</a>.</p>
+  {% endfor %}
+</section>
+
+{% if stats and stats.selectable %}
+<section class="panel" aria-labelledby="listone-h">
+  <h2 id="listone-h">Il listone della stagione {{ season['name'] }}</h2>
+  <dl class="facts">
+    <div><dt>Giocatori selezionabili</dt><dd>{{ stats.selectable }}</dd></div>
+    <div><dt>Serie A</dt><dd>{{ stats.serie_a }}</dd></div>
+    <div><dt>Serie B</dt><dd>{{ stats.serie_b }}</dd></div>
+    <div><dt>Squadre</dt><dd>{{ stats.teams }}</dd></div>
+  </dl>
+  <p><a href="{{ url_for('players.listing') }}">Consulta il listone</a></p>
+</section>
+{% elif stats %}
+<section class="panel"><p>Il listone di questa stagione non è ancora stato importato.</p></section>
+{% endif %}
+{% endif %}
+{% endblock %}

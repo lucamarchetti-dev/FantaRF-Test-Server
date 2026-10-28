@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_label %}
+{% block title %}Importa il listone{% endblock %}
+{% block content %}
+<h1>Importa il listone</h1>
+
+<section class="panel">
+  <h2>Carica il file Excel</h2>
+  <p>Il listone si carica <strong>una volta all'inizio della stagione</strong> e resta valido per tutta la stagione. Serve un nuovo caricamento solo se cambia davvero (es. mercato invernale): le modifiche si applicano ai giocatori, le formazioni già inviate non cambiano.</p>
+  <p>Carica il file Excel ufficiale. Prima di scrivere qualsiasi dato vedrai un'anteprima con le righe valide, quelle scartate e le differenze rispetto al listone attuale.</p>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  {% if not seasons %}
+    <p class="notice notice-warn">Non esiste ancora nessuna stagione. <a href="{{ url_for('staff.seasons') }}">Creane una</a> prima di importare.</p>
+  {% else %}
+  <form method="post" enctype="multipart/form-data" class="form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="field">
+      <label for="season_id">Stagione di destinazione</label>
+      <select id="season_id" name="season_id" required>
+        {% for s in seasons %}
+        <option value="{{ s['id'] }}" {% if (form.get('season_id') and form.get('season_id')|string == s['id']|string) or (not form.get('season_id') and active and active['id'] == s['id']) %}selected{% endif %}>{{ s['name'] }} ({{ status_label(s['status']) }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="file">File Excel (.xlsx)</label>
+      <input id="file" name="file" type="file" accept=".xlsx" required>
+    </div>
+    <div class="field">
+      <label for="sheet">Foglio con l'anagrafica</label>
+      <input id="sheet" name="sheet" value="{{ form.get('sheet', 'Consultazione') }}" aria-describedby="sheet-hint" required>
+      <p id="sheet-hint" class="hint">Nel file ufficiale è «Consultazione». Gli altri fogli (voti, classifiche, calcoli) non sono anagrafica.</p>
+    </div>
+    <button class="btn" type="submit">Carica e controlla</button>
+  </form>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Importazioni recenti</h2>
+  <table class="table simple">
+    <thead><tr><th scope="col">Quando</th><th scope="col">File</th><th scope="col">Stagione</th><th scope="col">Esito</th><th scope="col"><span class="sr-only">Apri</span></th></tr></thead>
+    <tbody>
+    {% for b in batches %}
+      <tr>
+        <td data-label="Quando">{{ b['created_at']|localtime }}</td>
+        <td data-label="File">{{ b['filename'] }} <span class="muted">({{ b['sheet'] }})</span></td>
+        <td data-label="Stagione">{{ b['season_name'] }}</td>
+        <td data-label="Esito"><span class="tag tag-{{ b['status'] }}">{{ status_label(b['status']) }}</span></td>
+        <td data-label=""><a href="{{ url_for('staff.import_detail', batch_id=b['id']) }}">Apri</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">Nessuna importazione eseguita.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

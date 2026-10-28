@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_label %}
+{% block title %}Stagioni{% endblock %}
+{% block content %}
+<h1>Stagioni</h1>
+<table class="table simple">
+  <thead><tr><th scope="col">Nome</th><th scope="col">Stato</th><th scope="col">Giocatori</th><th scope="col">Date</th><th scope="col"><span class="sr-only">Azioni</span></th></tr></thead>
+  <tbody>
+  {% for s in seasons %}
+    <tr>
+      <td data-label="Nome"><strong>{{ s['name'] }}</strong></td>
+      <td data-label="Stato"><span class="tag tag-{{ s['status'] }}">{{ status_label(s['status']) }}</span></td>
+      <td data-label="Giocatori">{{ s['players'] }}</td>
+      <td data-label="Date">{% if s['starts_on'] or s['ends_on'] %}{{ s['starts_on'] or '…' }} – {{ s['ends_on'] or '…' }}{% else %}—{% endif %}</td>
+      <td data-label="">
+        {% if s['status'] != 'active' %}
+        <form method="post" action="{{ url_for('staff.activate_season', season_id=s['id']) }}" class="inline">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn btn-quiet btn-sm" type="submit" data-confirm="Attivare la stagione {{ s['name'] }}? L'eventuale stagione attiva verrà archiviata.">Attiva</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Nessuna stagione: creane una qui sotto.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<section class="panel">
+  <h2>Nuova stagione</h2>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" class="form form-row">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="field"><label for="name">Nome (es. S13)</label><input id="name" name="name" value="{{ form.get('name', '') }}" required maxlength="40"></div>
+    <div class="field"><label for="starts_on">Inizio (AAAA-MM-GG, facoltativo)</label><input id="starts_on" name="starts_on" value="{{ form.get('starts_on', '') }}" inputmode="numeric" placeholder="2026-09-01"></div>
+    <div class="field"><label for="ends_on">Fine (AAAA-MM-GG, facoltativo)</label><input id="ends_on" name="ends_on" value="{{ form.get('ends_on', '') }}" inputmode="numeric" placeholder="2027-05-31"></div>
+    <div class="field actions-inline"><button class="btn" type="submit">Crea stagione</button></div>
+  </form>
+</section>
+{% endblock %}

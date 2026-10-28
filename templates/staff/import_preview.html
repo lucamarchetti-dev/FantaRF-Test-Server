@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% from "_macros.html" import role_badge, serie_badge %}
+{% block title %}Anteprima importazione{% endblock %}
+{% block content %}
+<h1>Anteprima importazione</h1>
+<p class="muted">{{ batch['filename'] }} · foglio «{{ batch['sheet'] }}» · stagione <strong>{{ batch['season_name'] }}</strong>. Nulla è stato ancora scritto.</p>
+
+{% if error %}
+  <p class="notice notice-error" role="alert">{{ error }}</p>
+  <form method="post" action="{{ url_for('staff.import_cancel', batch_id=batch['id']) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn btn-quiet" type="submit">Annulla e ricomincia</button></form>
+{% elif preview.report is none %}
+  <section class="panel">
+    <h2>Associa le colonne</h2>
+    <p class="notice notice-warn">Non ho riconosciuto tutte le colonne obbligatorie ({% for f in preview.table.missing_fields %}{{ FIELD_LABELS[f] }}{% if not loop.last %}, {% endif %}{% endfor %}). Indica la riga delle intestazioni e quale colonna corrisponde a ogni campo.</p>
+    {% if preview.table.headers %}
+    <form method="post" action="{{ url_for('staff.import_mapping', batch_id=batch['id']) }}" class="form form-row">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field"><label for="header_row">Riga delle intestazioni</label><input id="header_row" name="header_row" type="number" min="1" value="{{ preview.table.header_row or 1 }}" required></div>
+      {% for f in FIELDS %}
+      <div class="field">
+        <label for="col_{{ f }}">{{ FIELD_LABELS[f] }}</label>
+        <select id="col_{{ f }}" name="col_{{ f }}" required>
+          <option value="">Scegli…</option>
+          {% for h in preview.table.headers %}
+          <option value="{{ h.index }}" {% if preview.table.mapping.get(f) == h.index %}selected{% endif %}>{{ h.letter }} – {{ h.text }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+      <div class="field actions-inline"><button class="btn" type="submit">Applica associazione</button></div>
+    </form>
+    {% else %}
+      <p>Nel foglio non ho trovato nessuna riga di intestazioni. Controlla di aver scelto il foglio giusto.</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('staff.import_cancel', batch_id=batch['id']) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn btn-quiet" type="submit">Annulla</button></form>
+  </section>
+{% else %}
+  {% set r = preview.report %}{% set d = preview.diff %}
+  <section class="panel" aria-labelledby="riepilogo">
+    <h2 id="riepilogo">Riepilogo</h2>
+    <dl class="facts">
+      <div><dt>Righe lette</dt><dd>{{ r.total_rows }}</dd></div>
+      <div><dt>Valide</dt><dd>{{ r.valid|length }}</dd></div>
+      <div class="{{ 'bad' if r.issues else '' }}"><dt>Scartate</dt><dd>{{ r.issues|length }}</dd></div>
+    </dl>
+    <dl class="facts">
+      <div><dt>Giocatori nuovi</dt><dd>{{ d.new|length }}</dd></div>
+      <div><dt>Con dati modificati</dt><dd>{{ d.changed|length }}</dd></div>
+      <div><dt>Invariati</dt><dd>{{ d.unchanged }}</dd></div>
+      <div><dt>Nel listone ma non nel file</dt><dd>{{ d.absent|length }}</dd></div>
+    </dl>
+    <p class="muted">Colonne usate (riga {{ preview.table.header_row }}):
+      {% for f in FIELDS %}{% for h in preview.table.headers if h.index == preview.table.mapping[f] %}<strong>{{ FIELD_LABELS[f] }}</strong> = colonna {{ h.letter }}{% if not loop.last %}{% endif %}{% endfor %}{% if not loop.last %}; {% endif %}{% endfor %}.</p>
+  </section>
+
+  {% if r.issues %}
+  <section class="panel" aria-labelledby="scartate">
+    <h2 id="scartate">Righe scartate ({{ r.issues|length }})</h2>
+    <p>Queste righe <strong>non verranno importate</strong> e non saranno selezionabili nelle formazioni finché non vengono corrette nel file e ricaricate.</p>
+    {% for g_ in r.issues_by_code() %}
+    <details class="issue-group">
+      <summary><strong>{{ g_.count }}</strong> · {{ g_.label }}</summary>
+      <table class="table simple compact">
+        <thead><tr><th scope="col">Riga</th><th scope="col">Motivo</th><th scope="col">Contenuto letto</th></tr></thead>
+        <tbody>
+        {% for i in g_.rows[:25] %}
+          <tr><td data-label="Riga">{{ i.row_number }}</td><td data-label="Motivo">{{ i.messages|join('; ') }}</td>
+              <td data-label="Contenuto">{{ i.raw.id }} | {{ i.raw.name }} | {{ i.raw.serie }} | {{ i.raw.ruolo }} | {{ i.raw.squadra }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% if g_.count > 25 %}<p class="muted">Mostrate le prime 25 righe su {{ g_.count }}. L'elenco completo resterà nel report dopo la conferma.</p>{% endif %}
+    </details>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if r.warnings %}
+  <section class="panel" aria-labelledby="avvisi">
+    <h2 id="avvisi">Avvisi (non bloccanti)</h2>
+    {% for g_ in r.warnings_by_code() %}
+    <details class="issue-group"><summary><strong>{{ g_.count }}</strong> · {{ g_.label }}</summary>
+      <ul class="plain">{% for w in g_.rows[:15] %}<li>Riga {{ w.row_number }}: {{ w.messages|join('; ') }}</li>{% endfor %}</ul>
+    </details>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if d.changed %}
+  <section class="panel" aria-labelledby="modificati">
+    <h2 id="modificati">Dati che cambiano ({{ d.changed|length }})</h2>
+    <p>Il valore attuale viene conservato nello storico della stagione; da ora vale quello del file.</p>
+    <table class="table simple compact">
+      <thead><tr><th scope="col">Giocatore</th><th scope="col">Cosa cambia</th></tr></thead>
+      <tbody>
+      {% for c in d.changed[:50] %}
+        <tr><td data-label="Giocatore">{{ c.row.name }} <span class="pid">#{{ c.row.external_id }}</span></td>
+          <td data-label="Cosa cambia">
+            {% if 'name' in c.fields %}nome: {{ c.old.full_name }} → {{ c.row.name }}; {% endif %}
+            {% if 'squadra' in c.fields %}squadra: {{ c.old.team }} → {{ c.row.squadra }}; {% endif %}
+            {% if 'serie' in c.fields %}serie: {{ c.old.serie }} → {{ c.row.serie }}; {% endif %}
+            {% if 'ruolo' in c.fields %}ruolo: {{ c.old.ruolo }} → {{ c.row.ruolo }}{% endif %}
+          </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if d.changed|length > 50 %}<p class="muted">Mostrati i primi 50 su {{ d.changed|length }}.</p>{% endif %}
+  </section>
+  {% endif %}
+
+  {% if d.absent %}
+  <section class="panel" aria-labelledby="assenti">
+    <h2 id="assenti">Nel listone ma non nel file ({{ d.absent|length }})</h2>
+    <p>Questi giocatori <strong>non vengono toccati</strong>: restano selezionabili finché non li disattivi dalla pagina Giocatori.</p>
+    <details class="issue-group"><summary>Mostra i primi {{ [d.absent|length, 20]|min }}</summary>
+      <ul class="plain">{% for a in d.absent[:20] %}<li>{{ a.name }} <span class="pid">#{{ a.external_id }}</span> · {{ a.team }} ({{ a.serie }}, {{ a.ruolo }})</li>{% endfor %}</ul>
+    </details>
+  </section>
+  {% endif %}
+
+  <section class="panel confirm">
+    {% if preview.ready %}
+    <h2>Conferma</h2>
+    <p>Verranno importati <strong>{{ d.new|length + d.changed|length }}</strong> giocatori ({{ d.new|length }} nuovi, {{ d.changed|length }} aggiornati). L'operazione è atomica: se qualcosa va storto non viene scritto nulla.</p>
+    <div class="actions">
+      <form method="post" action="{{ url_for('staff.import_confirm', batch_id=batch['id']) }}" class="inline">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn" type="submit" data-confirm="Importare {{ d.new|length + d.changed|length }} giocatori nella stagione {{ batch['season_name'] }}?">Conferma l'importazione</button>
+      </form>
+      <form method="post" action="{{ url_for('staff.import_cancel', batch_id=batch['id']) }}" class="inline">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-quiet" type="submit">Annulla</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="notice notice-error" role="alert">Nessuna riga valida: non c'è nulla da importare. Controlla il foglio scelto e il file.</p>
+    <form method="post" action="{{ url_for('staff.import_cancel', batch_id=batch['id']) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn btn-quiet" type="submit">Annulla</button></form>
+    {% endif %}
+  </section>
+{% endif %}
+{% endblock %}

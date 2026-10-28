@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}I miei strike{% endblock %}
+{% block content %}
+<h1>I miei strike{% if season %} <span class="h1-sub">stagione {{ season['name'] }}</span>{% endif %}</h1>
+{% if not season %}<section class="panel"><p>Non c'è una stagione attiva.</p></section>
+{% else %}
+<section class="panel">
+  <p>Strike attivi: <strong>{{ count }} su {{ max_strikes }}</strong>.</p>
+  {% if count >= max_strikes %}<p class="notice notice-warn">Hai raggiunto il limite di strike previsto dal regolamento.</p>{% endif %}
+  {% if records %}<div class="table-wrap"><table class="table simple"><thead><tr><th>Data</th><th>Concorso</th><th>Motivo</th><th>Stato</th></tr></thead><tbody>
+  {% for r in records %}<tr><td data-label="Data">{{ r['created_at']|localtime }}</td><td data-label="Concorso">{{ r['contest_name'] or '—' }}</td><td data-label="Motivo">{{ r['reason'] }}</td><td data-label="Stato">{% if r['voided_at'] %}Annullato{% else %}Attivo{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<p>Non hai strike registrati in questa stagione.</p>{% endif %}
+</section>
+{% if g.user['role'] == 'staff' %}<p><a class="btn" href="{{ url_for('staff_strikes.index') }}">Apri la gestione strike dello staff</a></p>{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,15 @@
+# Replica continua del database SQLite su storage compatibile S3 (Backblaze B2, Cloudflare R2, ...).
+# I valori arrivano da variabili d'ambiente (Litestream le espande da solo); le chiavi di accesso
+# sono lette direttamente da LITESTREAM_ACCESS_KEY_ID e LITESTREAM_SECRET_ACCESS_KEY.
+dbs:
+  - path: ${FANTAPG_DATABASE}
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_BUCKET}
+        path: ${LITESTREAM_PATH}
+        endpoint: ${LITESTREAM_ENDPOINT}
+        region: ${LITESTREAM_REGION}
+        force-path-style: true
+        # Ogni quanto inviare le modifiche. Più alto = meno richieste all'API, ma in caso di arresto
+        # brusco (non di riavvio normale, che sincronizza prima di uscire) si possono perdere gli ultimi secondi.
+        sync-interval: 10s

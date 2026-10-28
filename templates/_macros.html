@@ -1,0 +1,56 @@
+{% macro role_badge(r) -%}
+<span class="role role-{{ r }}" title="{{ ROLE_LABELS[r] }}"><span aria-hidden="true">{{ r }}</span><span class="sr-only">{{ ROLE_LABELS[r] }}</span></span>
+{%- endmacro %}
+
+{% macro serie_badge(s) -%}
+<span class="serie" title="Serie {{ s }}"><span class="sr-only">Serie </span>{{ s }}</span>
+{%- endmacro %}
+
+{#- Stemma della squadra: l'immagine se il file esiste in static/crests/, altrimenti lo spazio vuoto tratteggiato. -#}
+{% macro crest(team) -%}
+{%- set url = crest_url(team) -%}
+{%- if url -%}<img class="crest" src="{{ url }}" alt="" width="24" height="24" loading="lazy" decoding="async">
+{%- else -%}<span class="crest crest-empty" aria-hidden="true"></span>{%- endif -%}
+{%- endmacro %}
+
+{#- Squadra di un giocatore: stemma, nome e, se indicata, la serie. Il nome resta scritto: lo stemma è solo decorativo. -#}
+{% macro team_label(team, serie=none) -%}
+<span class="team-label">{{ crest(team) }}<span class="team-name">{{ team }}</span>{% if serie %}{{ serie_badge(serie) }}{% endif %}</span>
+{%- endmacro %}
+
+{% macro csrf() -%}
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+{%- endmacro %}
+
+{% macro pagination(endpoint, page, pages, args) -%}
+{% if pages > 1 %}
+<nav class="pager" aria-label="Pagine dei risultati">
+  {% if page > 1 %}<a class="btn btn-quiet" href="{{ url_for(endpoint, page=page-1, **args) }}" rel="prev">Precedente</a>{% else %}<span></span>{% endif %}
+  <span class="pager-pos">Pagina {{ page }} di {{ pages }}</span>
+  {% if page < pages %}<a class="btn btn-quiet" href="{{ url_for(endpoint, page=page+1, **args) }}" rel="next">Successiva</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro status_label(s) -%}
+{%- if s == 'active' %}attiva{% elif s == 'draft' %}bozza{% elif s == 'archived' %}archiviata{% elif s == 'preview' %}in anteprima{% elif s == 'applied' %}applicata{% elif s == 'cancelled' %}annullata{% elif s == 'failed' %}non riuscita{% else %}{{ s }}{% endif -%}
+{%- endmacro %}
+
+{% macro contest_tag(c) -%}
+<span class="tag tag-c-{{ c.effective }}">{{ CONTEST_STATUS[c.effective] }}</span>
+{%- endmacro %}
+
+{% macro lineup_table(players) -%}
+<table class="table simple compact lineup-table">
+  <thead><tr><th scope="col">Ruolo</th><th scope="col">Giocatore</th><th scope="col">Squadra</th></tr></thead>
+  <tbody>
+  {% for p in players %}
+    <tr class="band band-{{ p['ruolo'] }}">
+      <td data-label="Ruolo">{{ role_badge(p['ruolo']) }}</td>
+      <td data-label="Giocatore"><span class="pname">{{ p['full_name'] }}</span></td>
+      <td data-label="Squadra">{{ team_label(p['team_name'], p['serie']) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{%- endmacro %}

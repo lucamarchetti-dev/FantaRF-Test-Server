@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% from "_macros.html" import contest_tag, role_badge, serie_badge %}
+{% block title %}{{ contest.name }} (staff){% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('staff_contests.index') }}">← Concorsi</a></p>
+<div class="contest-head"><h1>{{ contest.name }}</h1> {{ contest_tag(contest) }}</div>
+<p class="muted">Scadenza <strong>{{ contest.closes_at|datelong }}</strong>{% if contest.effective == 'open' %} · tra {{ contest.closes_dt|timeleft }}{% endif %}
+  · <a href="{{ url_for('contests.detail', contest_id=contest.id) }}">vedi come lo vedono i partecipanti</a></p>
+
+<section class="panel" aria-labelledby="azioni">
+  <h2 id="azioni">Stato del concorso</h2>
+  <div class="actions">
+  {% if contest.status == 'draft' %}
+    <form method="post" action="{{ url_for('staff_contests.open_', contest_id=contest.id) }}" class="inline">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn" type="submit" data-confirm="Aprire il concorso? I partecipanti potranno subito inviare la formazione.">Apri il concorso</button>
+    </form>
+    <form method="post" action="{{ url_for('staff_contests.delete', contest_id=contest.id) }}" class="inline">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-quiet" type="submit" data-confirm="Eliminare questa bozza?">Elimina la bozza</button>
+    </form>
+  {% elif contest.status == 'open' and contest.effective in ('open', 'scheduled') %}
+    <form method="post" action="{{ url_for('staff_contests.close', contest_id=contest.id) }}" class="inline">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn" type="submit" data-confirm="Chiudere subito il concorso? Non si accetteranno più formazioni.">Chiudi ora</button>
+    </form>
+  {% endif %}
+  </div>
+  {% if contest.effective == 'closed' %}
+    <p>Il concorso è chiuso. Una riapertura è un'eccezione: richiede un motivo e resta registrata.</p>
+    <details class="issue-group">
+      <summary>Riapri il concorso (eccezionale)</summary>
+      <form method="post" action="{{ url_for('staff_contests.reopen', contest_id=contest.id) }}" class="form">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="field"><label for="new_closes_at">Nuova scadenza</label><input id="new_closes_at" name="new_closes_at" type="datetime-local" required value="{{ new_deadline_input }}"></div>
+        <div class="field"><label for="reason">Motivo (obbligatorio, visibile nel registro)</label><input id="reason" name="reason" required minlength="5" maxlength="300"></div>
+        <div><button class="btn" type="submit" data-confirm="Riaprire il concorso? L'operazione viene registrata.">Riapri</button></div>
+      </form>
+    </details>
+  {% endif %}
+  {% if reopenings %}
+    <h3 class="small-h">Riaperture registrate</h3>
+    <ul class="plain">{% for r in reopenings %}<li>{{ r.created_at|localtime }} · {{ r.user_name or 'sistema' }}: da {{ r.old_closes_at|localtime }} a {{ r.new_closes_at|localtime }} — «{{ r.reason }}»</li>{% endfor %}</ul>
+  {% endif %}
+</section>
+
+{% if contest.effective == 'closed' or contest.status in ('calculating', 'published') %}
+<section class="panel" aria-labelledby="ris">
+  <h2 id="ris">Risultati</h2>
+  <p>{% if contest.status == 'published' %}Risultati pubblicati.{% elif contest.status == 'calculating' %}Voti e calcolo in corso.{% else %}Il concorso è chiuso: si possono avviare i risultati.{% endif %}</p>
+  <p><a class="btn" href="{{ url_for('staff_results.overview', contest_id=contest.id) }}">Apri i risultati</a></p>
+</section>
+{% endif %}
+
+<section class="panel" aria-labelledby="formazioni">
+  <h2 id="formazioni">Formazioni inviate ({{ lineups|length }})</h2>
+  {% if lineups %}
+  <table class="table simple compact">
+    <thead><tr><th scope="col">Partecipante</th><th scope="col">FantaTeam</th><th scope="col">Versione</th><th scope="col">Ultimo invio</th><th scope="col">Giocatori</th></tr></thead>
+    <tbody>
+    {% for l in lineups %}
+      <tr>
+        <td data-label="Partecipante"><a href="{{ url_for('staff_contests.lineup_detail', contest_id=contest.id, lineup_id=l.lineup_id) }}">{{ l.display_name }}</a></td>
+        <td data-label="FantaTeam">{{ l.fanta_team_name or '—' }}</td>
+        <td data-label="Versione">{{ l.version }}</td>
+        <td data-label="Ultimo invio">{{ l.submitted_at|localtime }}</td>
+        <td data-label="Giocatori" class="mini-roster">{% for p in l.players %}{{ role_badge(p.ruolo) }}{{ p.full_name }}{% if not loop.last %} · {% endif %}{% endfor %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p>Nessuna formazione inviata finora.</p>{% endif %}
+  {% if missing %}
+  <details class="issue-group"><summary><strong>{{ missing|length }}</strong> · senza formazione</summary>
+    <ul class="plain">{% for m in missing %}<li>{{ m.display_name }} <span class="muted">({{ m.username }})</span></li>{% endfor %}</ul>
+  </details>
+  {% endif %}
+</section>
+
+<section class="panel" aria-labelledby="modifica">
+  <h2 id="modifica">Modifica</h2>
+  {% if contest.status in ('calculating', 'published') %}
+    <p>Il concorso è in calcolo o pubblicato: non è modificabile da qui.</p>
+  {% else %}
+  <form method="post" action="{{ url_for('staff_contests.update', contest_id=contest.id) }}" class="form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="field"><label for="name">Nome</label><input id="name" name="name" maxlength="60" value="{{ contest.name }}"></div>
+    {% set locked = contest.status == 'closed' %}
+    <div class="form-row">
+      <div class="field"><label for="opens_at">Apertura <span class="muted">(facoltativa)</span></label><input id="opens_at" name="opens_at" type="datetime-local" value="{{ open_input }}" {% if locked %}readonly{% endif %}></div>
+      <div class="field"><label for="closes_at">Scadenza</label><input id="closes_at" name="closes_at" type="datetime-local" required value="{{ close_input }}" {% if locked %}readonly{% endif %}></div>
+    </div>
+    {% if locked %}<p class="hint">Concorso chiuso: scadenza e regole si cambiano solo con «Riapri».</p>{% endif %}
+    <div class="field"><label for="info">Informazioni e partite della settimana</label><textarea id="info" name="info" rows="5" maxlength="5000">{{ contest.info }}</textarea></div>
+    {% if not locked %}
+    <div class="field"><label for="matches_count">Partite da valutare in questo concorso</label>
+      <select id="matches_count" name="matches_count">{% for n in [2, 3] %}<option value="{{ n }}" {% if contest.matches_count == n %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+    {% endif %}
+    {% if not locked %}
+    <label class="check"><input type="checkbox" name="one_per_role" value="1" {% if contest.one_per_role %}checked{% endif %} {% if lineups %}disabled{% endif %}>
+      Richiedi un giocatore per ogni ruolo (P, D, T, C, W, A)</label>
+    <p class="hint">{% if lineups %}Esistono già formazioni: la regola non si può più cambiare.{% else %}Attivalo soltanto se lo staff ha confermato che è obbligatorio.{% endif %}</p>
+    {% if lineups and contest.one_per_role %}<input type="hidden" name="one_per_role" value="1">{% endif %}
+    {% endif %}
+    <div><button class="btn" type="submit">Salva le modifiche</button></div>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

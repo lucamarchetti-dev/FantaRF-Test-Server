@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Gestione strike{% endblock %}
+{% block content %}
+<h1>Gestione strike{% if season %} <span class="h1-sub">stagione {{ season['name'] }}</span>{% endif %}</h1>
+{% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+{% if not season %}<section class="panel"><p>Non c'è una stagione attiva. Crea o attiva una stagione prima di gestire gli strike.</p></section>
+{% else %}
+<section class="panel">
+  <h2>Assegna uno strike</h2>
+  <p>Limite previsto dal regolamento: {{ rules.max_strikes }} strike. Gli strike annullati rimangono nello storico ma non vengono conteggiati.</p>
+  <form method="post" class="stack">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label for="user_id">Partecipante</label>
+    <select id="user_id" name="user_id" required><option value="">Seleziona un partecipante</option>{% for u in users %}<option value="{{ u['id'] }}">{{ u['display_name'] }} (@{{ u['username'] }}){% if counts.get(u['id'], 0) %} · {{ counts.get(u['id'], 0) }} strike{% endif %}</option>{% endfor %}</select>
+    <label for="contest_id">Concorso (facoltativo)</label>
+    <select id="contest_id" name="contest_id"><option value="">Non associato a un concorso</option>{% for c in contests %}<option value="{{ c['id'] }}">{{ c['number'] }} · {{ c['name'] }}</option>{% endfor %}</select>
+    <label for="reason">Motivo</label><textarea id="reason" name="reason" minlength="3" maxlength="300" required rows="3" placeholder="Descrivi il motivo dello strike"></textarea>
+    <button class="btn" type="submit" name="action" value="add">Assegna strike</button>
+  </form>
+</section>
+<section class="panel"><h2>Registro strike</h2>
+{% if records %}<div class="table-wrap"><table class="table simple"><thead><tr><th>Data</th><th>Partecipante</th><th>Concorso</th><th>Motivo</th><th>Stato</th><th>Operazione</th></tr></thead><tbody>
+{% for r in records %}<tr>
+<td data-label="Data">{{ r['created_at']|localtime }}</td><th scope="row" data-label="Partecipante">{{ r['display_name'] }}</th><td data-label="Concorso">{{ r['contest_name'] or '—' }}</td><td data-label="Motivo">{{ r['reason'] }}</td>
+<td data-label="Stato">{% if r['voided_at'] %}Annullato: {{ r['void_reason'] }}{% else %}Attivo{% endif %}</td>
+<td data-label="Operazione">{% if not r['voided_at'] %}<form method="post" class="inline-form"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="void"><input type="hidden" name="strike_id" value="{{ r['id'] }}"><label class="sr-only" for="void-reason-{{ r['id'] }}">Motivo annullamento strike {{ r['id'] }}</label><input id="void-reason-{{ r['id'] }}" name="reason" minlength="3" maxlength="300" required placeholder="Motivo annullamento"><button class="btn btn-ghost" type="submit" data-confirm="Annullare questo strike? L'operazione resterà nello storico.">Annulla</button></form>{% else %}—{% endif %}</td>
+</tr>{% endfor %}</tbody></table></div>
+{% else %}<p>Nessuno strike registrato per questa stagione.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

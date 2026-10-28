@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import contest_tag %}
+{% block title %}Concorsi{% endblock %}
+{% block content %}
+<h1>Concorsi{% if season %} <span class="h1-sub">stagione {{ season['name'] }}</span>{% endif %}</h1>
+{% if not season %}
+  <p>Non c'è ancora una stagione attiva.</p>
+{% elif not contests %}
+  <p>Non ci sono ancora concorsi in questa stagione.</p>
+{% else %}
+<table class="table simple">
+  <thead><tr><th scope="col">Concorso</th><th scope="col">Stato</th><th scope="col">Scadenza</th>{% if g.user %}<th scope="col">La tua formazione</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for c in contests %}
+    <tr>
+      <td data-label="Concorso"><a href="{{ url_for('contests.detail', contest_id=c.id) }}"><strong>{{ c.name }}</strong></a></td>
+      <td data-label="Stato">{{ contest_tag(c) }}</td>
+      <td data-label="Scadenza">{{ c.closes_at|localtime }}</td>
+      {% if g.user %}
+      <td data-label="La tua formazione">
+        {% set m = mine.get(c.id) %}
+        {% if scores.get(c.id) %}<strong>{{ scores[c.id]|num }}</strong> <span class="muted">punti</span>
+        {% elif m %}<span class="state state-ok"><span aria-hidden="true">✓</span> versione {{ m.version }}</span>
+        {% elif c.effective in ('closed', 'calculating', 'published') %}<span class="muted">non inviata</span>
+        {% else %}<span class="muted">da inviare</span>{% endif %}
+      </td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

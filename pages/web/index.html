@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fanta PG · demo</title>
+  <link rel="stylesheet" href="style.css?v=__BUILD__">
+</head>
+<body>
+  <header class="bar">
+    <strong class="brand">Fanta PG</strong>
+    <span class="pill" title="Il database vive solo nel tuo browser: nessun server, nessun dato condiviso">Demo · dati solo in questo browser</span>
+    <span class="spacer"></span>
+    <button type="button" id="btn-cred" aria-expanded="false" aria-controls="cred">Accesso demo</button>
+    <button type="button" id="btn-reset">Azzera dati</button>
+  </header>
+
+  <section id="cred" class="cred" hidden>
+    <p>Questa è una <strong>demo</strong>: l'app gira interamente nel tuo browser. Ogni persona ha la propria copia, quindi
+       ciò che fai qui <strong>non è visibile agli altri</strong> e non tocca nessun server. Puoi provare tutto.</p>
+    <table>
+      <tr><th scope="row">Staff</th><td><code>admin</code></td><td><code>DemoAdmin-2026</code></td></tr>
+      <tr><th scope="row">Partecipante</th><td><code>tester</code></td><td><code>DemoTester-2026</code></td></tr>
+    </table>
+    <p>Per provare l'importazione dello staff puoi usare <a href="Elenco_Giocatori_Fantacalcio.xlsx" download>il listone di esempio (.xlsx)</a>.
+       «Azzera dati» riporta tutto allo stato iniziale. Usa una sola scheda alla volta.</p>
+  </section>
+
+  <main>
+    <div id="loading" class="loading" role="status" aria-live="polite">
+      <h1>Sto preparando la demo…</h1>
+      <progress aria-label="Caricamento"></progress>
+      <p id="status">Avvio…</p>
+      <p class="hint">La prima volta richiede qualche secondo in più (si scarica Python); dalle volte successive è molto più rapido.</p>
+    </div>
+    <div id="fatal" class="fatal" role="alert" hidden>
+      <h1>La demo non è partita</h1>
+      <p id="fatal-text"></p>
+      <pre id="fatal-detail"></pre>
+    </div>
+    <iframe id="app" title="Applicazione Fanta PG" hidden></iframe>
+  </main>
+
+  <script src="persist.js?v=__BUILD__"></script>
+  <script src="shell.js?v=__BUILD__"></script>
+</body>
+</html>

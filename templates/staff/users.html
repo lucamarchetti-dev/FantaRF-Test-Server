@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Utenti{% endblock %}
+{% block content %}
+<h1>Utenti</h1>
+<table class="table simple">
+  <thead><tr><th scope="col">Nome</th><th scope="col">Nome utente</th><th scope="col">Ruolo</th><th scope="col">Stato</th>{% if season %}<th scope="col">Stagione {{ season['name'] }}</th>{% endif %}<th scope="col"><span class="sr-only">Azioni</span></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td data-label="Nome"><strong>{{ u['display_name'] }}</strong></td>
+      <td data-label="Nome utente">{{ u['username'] }}</td>
+      <td data-label="Ruolo">{{ 'Staff' if u['role'] == 'staff' else 'Partecipante' }}</td>
+      <td data-label="Stato">
+        {% if u['status'] == 'active' %}<span class="tag tag-active">Attivo</span>{% else %}<span class="tag tag-off">Disattivato</span>{% endif %}
+        {% if u['must_change_password'] %}<span class="tag tag-draft">Password provvisoria</span>{% endif %}
+      </td>
+      {% if season %}
+      <td data-label="Stagione">
+        {% set ex = exclusions.get(u['id']) %}
+        {% if ex %}<span class="tag tag-off" title="{{ ex.reason }}">Escluso</span> <span class="muted">{{ ex.reason }}</span>
+          <form method="post" action="{{ url_for('staff.user_readmit', user_id=u['id']) }}" class="inline"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn btn-quiet btn-sm" type="submit">Riammetti</button></form>
+        {% else %}<span class="tag tag-active">Ammesso</span> <a href="{{ url_for('staff.user_exclusion', user_id=u['id']) }}">Escludi…</a>{% endif %}
+      </td>
+      {% endif %}
+      <td data-label="" class="row-actions">
+        <form method="post" action="{{ url_for('staff.user_reset', user_id=u['id']) }}" class="inline">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn btn-quiet btn-sm" type="submit" data-confirm="Generare una nuova password provvisoria per {{ u['display_name'] }}?">Reimposta password</button>
+        </form>
+        {% if u['id'] != g.user['id'] %}
+        <form method="post" action="{{ url_for('staff.user_status', user_id=u['id']) }}" class="inline">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          {% if u['status'] == 'active' %}
+            <input type="hidden" name="status" value="disabled">
+            <button class="btn btn-quiet btn-sm" type="submit" data-confirm="Disattivare l'account di {{ u['display_name'] }}?">Disattiva</button>
+          {% else %}
+            <input type="hidden" name="status" value="active">
+            <button class="btn btn-quiet btn-sm" type="submit">Riattiva</button>
+          {% endif %}
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<section class="panel">
+  <h2>Nuovo account</h2>
+  <p class="muted">Verrà generata una password provvisoria, mostrata una sola volta. Al primo accesso la persona dovrà sceglierne una propria.</p>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" class="form form-row">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="field"><label for="username">Nome utente</label><input id="username" name="username" value="{{ form.get('username', '') }}" required minlength="3" maxlength="40" autocapitalize="none" spellcheck="false"></div>
+    <div class="field"><label for="display_name">Nome visualizzato</label><input id="display_name" name="display_name" value="{{ form.get('display_name', '') }}" required maxlength="60"></div>
+    <div class="field"><label for="role">Ruolo</label>
+      <select id="role" name="role"><option value="user">Partecipante</option><option value="staff" {% if form.get('role') == 'staff' %}selected{% endif %}>Staff</option></select>
+    </div>
+    <div class="field actions-inline"><button class="btn" type="submit">Crea account</button></div>
+  </form>
+</section>
+{% endblock %}

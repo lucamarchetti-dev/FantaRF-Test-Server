@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}FantaRF{% endblock %} · FantaRF</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body class="page-{{ (request.endpoint or 'none')|replace('.', '-') }}">
+<a class="skip" href="#contenuto">Vai al contenuto</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="brand" href="{{ url_for('main.home') }}" aria-label="FantaRF, pagina iniziale">
+      <span class="brand-name">Fanta</span><span class="brand-num" aria-hidden="true">RF</span><span class="sr-only"> RF</span>
+    </a>
+    <nav class="nav" aria-label="Navigazione principale">
+      <a href="{{ url_for('contests.listing') }}" {% if request.endpoint and request.endpoint.startswith('contests.') %}aria-current="page"{% endif %}>Concorsi</a>
+      <a href="{{ url_for('players.listing') }}" {% if request.endpoint == 'players.listing' %}aria-current="page"{% endif %}>Giocatori</a>
+      <a href="{{ url_for('standings.index') }}" {% if request.endpoint and request.endpoint.startswith('standings.') %}aria-current="page"{% endif %}>Classifica</a>
+      {% if g.user %}<a href="{{ url_for('strikes.index') }}" {% if request.endpoint and (request.endpoint.startswith('strikes.') or request.endpoint.startswith('staff_strikes.')) %}aria-current="page"{% endif %}>Strike</a>{% endif %}
+      {% if g.user and g.user['role'] == 'staff' %}
+      <a href="{{ url_for('staff.index') }}" {% if request.endpoint and request.endpoint.startswith('staff.') %}aria-current="page"{% endif %}>Staff</a>
+      {% endif %}
+    </nav>
+    <div class="account">
+      {% if g.user %}
+        <a class="who" href="{{ url_for('auth.change_password') }}" title="Cambia password">{{ g.user['display_name'] }}</a>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn btn-ghost" type="submit">Esci</button>
+        </form>
+      {% else %}
+        <a class="btn btn-ghost" href="{{ url_for('auth.login') }}">Accedi</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+<main id="contenuto" class="wrap main">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <p class="notice notice-{{ category }}" role="{{ 'alert' if category == 'error' else 'status' }}">{{ message }}</p>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="wrap foot">FantaRF · gioco di ruolo RoleFootball / Progetto Gaming · v{{ app_version }}</footer>
+</body>
+</html>
