@@ -2,7 +2,8 @@
 
 Regole CONFERMATE dal regolamento: sei giocatori, tre di Serie A e tre di Serie B, tutti di
 squadre diverse, tutti presenti nel listone ufficiale. Il vincolo "un giocatore per ruolo"
-(esempio del regolamento) NON e' ancora confermato: e' un parametro (Rules.one_per_role).
+(esempio del regolamento) e' confermato dallo staff ed e' acceso di default nei nuovi concorsi, ma resta un
+parametro per concorso (Rules.one_per_role).
 """
 from __future__ import annotations
 

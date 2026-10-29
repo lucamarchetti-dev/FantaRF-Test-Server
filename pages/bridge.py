@@ -166,7 +166,7 @@ def first_run() -> bool:
         cid = contests_svc.create_contest(
             conn, season_id=season["id"], number=1, name="Concorso 1 (demo)",
             opens_at=now - timedelta(hours=1), closes_at=now + timedelta(days=14),
-            info="Concorso creato automaticamente per la demo.", one_per_role=False, actor_id=None)
+            info="Concorso creato automaticamente per la demo.", one_per_role=True, actor_id=None)
         contests_svc.open_contest(conn, cid, None, now=now)
         return True
     finally:

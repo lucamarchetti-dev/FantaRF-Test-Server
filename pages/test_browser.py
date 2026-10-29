@@ -195,6 +195,35 @@ def main() -> int:
 
         ctx.close()
 
+        print("Selettore della formazione: un giocatore per ruolo")
+        srv.B.reset_cookies()          # la sessione vive nel ponte Python: si esce dall'account admin
+        ctx_t = browser.new_context()
+        pt = ctx_t.new_page()
+        pt.on("dialog", lambda d: d.accept())
+        srv.alias_worker = True
+        pt.goto(base)
+        pt.wait_for_selector("#app:not([hidden])", timeout=20000)
+        ft = pt.frame_locator("#app")
+        ft.get_by_role("link", name=re.compile("accedi|login", re.I)).first.click()
+        ft.locator('input[name="username"]').fill("tester")
+        ft.locator('input[name="password"]').fill("DemoTester-2026")
+        ft.locator('form button[type="submit"]').first.click()
+        ft.get_by_role("link", name=re.compile("concors", re.I)).first.wait_for(timeout=10000)
+        pt.frames[-1].goto(base + "app/concorsi/1/formazione")
+        ft.locator("[data-add]").first.wait_for(timeout=10000)
+        first = ft.locator("[data-add]").first
+        first_label = first.get_attribute("aria-label")
+        first.click()
+        ft.locator("li.slot-filled").first.wait_for(timeout=5000)
+        blocked = ft.locator("li.result.is-blocked .why", has_text=re.compile("Ruolo [PDTCWA] già coperto"))
+        check("aggiunto un giocatore, gli altri dello stesso ruolo diventano non selezionabili con il motivo",
+              blocked.count() > 0, first_label)
+        check("…e per quelle righe non c'è il pulsante «Aggiungi»",
+              ft.locator("li.result.is-blocked button[data-add]").count() == 0)
+        check("la regola compare nel riepilogo della formazione",
+              ft.get_by_text(re.compile("Un giocatore per ruolo")).count() > 0)
+        ctx_t.close()
+
         print("Primo accesso con un collegamento diretto (service worker non ancora attivo)")
         srv.alias_worker = True
         ctx2 = browser.new_context()

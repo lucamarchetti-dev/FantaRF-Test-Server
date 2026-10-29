@@ -157,6 +157,57 @@ def main() -> int:
         st, _, html, _ = br.get(loc[len(ORIGIN):] if loc.startswith(ORIGIN) else loc)
         check("anteprima dell'importazione → 200", st == 200 and "righe" in html.lower())
 
+    print("Un giocatore per ruolo (concorso demo)")
+    import sqlite3
+    dbc = sqlite3.connect(state / B.DB_NAME)
+    dbc.row_factory = sqlite3.Row
+    contest = dbc.execute("SELECT id, one_per_role FROM contests ORDER BY id LIMIT 1").fetchone()
+    check("il concorso demo richiede un giocatore per ruolo", contest is not None and contest["one_per_role"] == 1,
+          str(dict(contest) if contest else None))
+    rows = dbc.execute("SELECT player_id, serie, ruolo, team_id FROM player_season_data "
+                       "WHERE valid_to IS NULL AND selectable = 1").fetchall()
+
+    def pick(roles):
+        """Sei giocatori (tre per serie, squadre diverse) con esattamente questi ruoli."""
+        def rec(i, used, per_serie, out):
+            if i == len(roles):
+                return out
+            for r in rows:
+                if r["ruolo"] == roles[i] and r["team_id"] not in used and per_serie[r["serie"]] < 3 and r["player_id"] not in out:
+                    per_serie[r["serie"]] += 1
+                    got = rec(i + 1, used | {r["team_id"]}, per_serie, out + [r["player_id"]])
+                    if got:
+                        return got
+                    per_serie[r["serie"]] -= 1
+            return None
+        return rec(0, frozenset(), {"A": 0, "B": 0}, [])
+
+    from urllib.parse import urlencode
+    B.reset_cookies()
+    tb = Browser(B)
+    tb.login("tester", "DemoTester-2026")
+    url = f"{PREFIX}/concorsi/{contest['id']}/formazione"
+
+    def post_lineup(ids):
+        fields = [("_csrf", tb.csrf(url)), ("team_name", "")] + [("player_id", str(i)) for i in ids]
+        st, h, body = tb.request("POST", url, urlencode(fields).encode(), {"content-type": "application/x-www-form-urlencoded"})
+        return st, body.decode("utf-8", "replace")
+
+    def lineups_count():
+        return dbc.execute("SELECT COUNT(*) FROM lineups").fetchone()[0]
+
+    dup = pick(["P", "D", "D", "T", "C", "W"])
+    check("trovati giocatori per la prova con un ruolo ripetuto", dup is not None)
+    before = lineups_count()
+    st, body = post_lineup(dup)
+    check("due difensori (ruolo ripetuto) → respinta con il motivo",
+          "serve un giocatore per ruolo" in body and lineups_count() == before, f"{st}")
+    ok_ids = pick(["P", "D", "T", "C", "W", "A"])
+    check("trovati giocatori per la prova con un ruolo ciascuno", ok_ids is not None)
+    st, body = post_lineup(ok_ids)
+    check("un giocatore per ruolo → formazione accettata", st in (200, 302) and lineups_count() == before + 1, f"{st}")
+    dbc.close()
+
     print("Percorsi: nessun link deve uscire dal sottopercorso della demo")
     for who, creds in (("staff", ("admin", "DemoAdmin-2026")), ("partecipante", ("tester", "DemoTester-2026"))):
         b2 = Browser(B)

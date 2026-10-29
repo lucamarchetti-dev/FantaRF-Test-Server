@@ -45,7 +45,7 @@ def load_config(instance_path: str | os.PathLike, overrides: dict | None = None)
         "DEFAULT_DEADLINE_WEEKDAY": int(os.environ.get("FANTAPG_DEADLINE_WEEKDAY", "0")),   # 0 = lunedì
         "DEFAULT_DEADLINE_TIME": os.environ.get("FANTAPG_DEADLINE_TIME", "20:30"),
         # "Un giocatore per ruolo": NON ancora confermato dallo staff -> spento di default.
-        "DEFAULT_ONE_PER_ROLE": _flag("FANTAPG_DEFAULT_ONE_PER_ROLE", "0"),
+        "DEFAULT_ONE_PER_ROLE": _flag("FANTAPG_DEFAULT_ONE_PER_ROLE", "1"),
         # Parametri del calcolo. Il voto SV (5,5) è confermato; l'arrotondamento resta un valore ricavato dall'Excel.
         "SCORE_NOT_PLAYED_VOTE": os.environ.get("FANTAPG_NOT_PLAYED_VOTE", "5.5"),        # PDF: nessuna partita giocata (l'app web usa il voto SV della stagione)
         "SCORE_MISSING_MATCH_VOTE": os.environ.get("FANTAPG_MISSING_MATCH_VOTE", "5.5"),  # voto SV predefinito (5,5, confermato dallo staff); lo staff può cambiarlo per stagione da Staff → Punteggi

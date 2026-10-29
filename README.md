@@ -108,7 +108,7 @@ Tutti si lanciano come `flask --app . <comando>`.
 4. **Apri il concorso**: i partecipanti lo vedono in home e compongono la formazione.
 5. Alla scadenza si chiude da solo. «Chiudi ora» e «Riapri» (eccezionale, con motivo) sono nella pagina del concorso.
 
-Il vincolo «un giocatore per ruolo» è una casella per concorso, **spenta di default** finché lo staff non conferma che è obbligatorio.
+Il vincolo «un giocatore per ruolo» (P, D, T, C, W, A) è una casella per concorso, **accesa di default**: con la casella accesa la formazione con un ruolo ripetuto non si può inviare. Lo staff può spegnerla per un singolo concorso.
 Il selettore delle formazioni richiede JavaScript.
 
 ## Risultati di un concorso
@@ -136,7 +136,7 @@ Il selettore delle formazioni richiede JavaScript.
 | `FANTAPG_LOGIN_MAX_FAILURES` / `FANTAPG_LOGIN_WINDOW_MINUTES` | `5` / `15` | Blocco temporaneo dopo tentativi falliti. |
 | `FANTAPG_TIMEZONE` | `Europe/Rome` | Fuso orario di visualizzazione e inserimento delle scadenze. |
 | `FANTAPG_DEADLINE_WEEKDAY` / `FANTAPG_DEADLINE_TIME` | `0` / `20:30` | Scadenza *proposta* per i nuovi concorsi (0 = lunedì). Modificabile per concorso. |
-| `FANTAPG_DEFAULT_ONE_PER_ROLE` | `0` | Valore iniziale di «un giocatore per ruolo» nei nuovi concorsi. |
+| `FANTAPG_DEFAULT_ONE_PER_ROLE` | `1` | Valore iniziale di «un giocatore per ruolo» nei nuovi concorsi (`0` per spegnerlo). |
 | `FANTAPG_NOT_PLAYED_VOTE` | `5.5` | Non più usata dall'app web: il voto di chi non gioca nessuna partita segue il voto SV della stagione (Staff → Punteggi). |
 | `FANTAPG_MISSING_MATCH_VOTE` | `5.5` | Voto SV **predefinito**, valido finché lo staff non ne sceglie un altro per la stagione da Staff → Punteggi. |
 | `FANTAPG_SCORE_DECIMALS` | vuoto | Vuoto = valori esatti. Un numero arrotonda il voto a quei decimali. |
