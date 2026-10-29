@@ -620,8 +620,17 @@ def published_totals(db, user_id: int, contest_ids: list[int]) -> dict[int, str]
 
 
 def recent_runs(db, contest_id: int, limit: int = 20):
-    return db.execute("SELECT r.*, u.display_name AS user_name FROM score_runs r LEFT JOIN users u ON u.id = r.user_id "
+    rows = db.execute("SELECT r.*, u.display_name AS user_name FROM score_runs r LEFT JOIN users u ON u.id = r.user_id "
                       "WHERE r.contest_id = ? ORDER BY r.id DESC LIMIT ?", (contest_id, limit)).fetchall()
+    runs = []
+    for r in rows:
+        run = dict(r)
+        try:
+            run["summary"] = json.loads(r["summary_json"]) if r["summary_json"] else {}
+        except ValueError:
+            run["summary"] = {}
+        runs.append(run)
+    return runs
 
 
 def recent_changes(db, contest_id: int, limit: int = 30):

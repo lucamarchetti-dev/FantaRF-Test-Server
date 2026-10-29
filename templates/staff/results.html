@@ -55,14 +55,8 @@
     {% endif %}
   </div>
   {% if contest.status == 'published' %}
-  <details class="issue-group"><summary>Ricalcola con i pesi attuali</summary>
-    <form method="post" action="{{ url_for('staff_results.recalculate', contest_id=contest.id) }}" class="form">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <p class="hint">Serve solo se hai cambiato i pesi dopo la pubblicazione: i punteggi pubblicati non cambiano da soli.</p>
-      <div class="form-row"><div class="field grow"><label for="rr">Motivo</label><input id="rr" name="reason" required minlength="3" maxlength="300"></div>
-        <div class="field actions-inline"><button class="btn btn-quiet btn-sm" type="submit" data-confirm="Ricalcolare il concorso con i pesi attuali?">Ricalcola</button></div></div>
-    </form>
-  </details>
+  <p class="hint">Se dopo la pubblicazione hai cambiato i pesi o corretto dei dati, i punteggi pubblicati non cambiano da soli:
+    <a href="{{ url_for('staff_results.recalculation', contest_id=contest.id) }}">controlla l’anteprima e applica il ricalcolo</a>.</p>
   {% endif %}
   <p class="hint">Formula e pesi: <a href="{{ url_for('staff_weights.weights') }}">Punteggi</a>.</p>
 </section>
@@ -136,7 +130,7 @@
 <section class="panel" aria-labelledby="storico">
   <h2 id="storico">Storico operazioni</h2>
   <ul class="plain">{% for r in runs %}<li>{{ r.created_at|localtime }} · {{ r.user_name or 'sistema' }} · <code>{{ r.kind }}</code>
-    {% if r.kind == 'recalculate' %}— «{{ r.summary.reason }}»
+    {% if r.kind == 'recalculate' %}{% if r.summary.reason %}— «{{ r.summary.reason }}»{% endif %}
       {% set fx = r.summary.effects %}
       {% if fx and (fx.lineups or fx.players) %}<details><summary>Effetti: {{ fx.players|length }} voti, {{ fx.lineups|length }} punteggi</summary>
         <ul class="plain">{% for c in fx.players %}<li>{{ c.name }}: {{ c.old|num }} → {{ c.new|num }}</li>{% endfor %}{% for c in fx.lineups %}<li><strong>{{ c.name }}</strong>: {{ c.old|num }} → {{ c.new|num }}</li>{% endfor %}</ul></details>
