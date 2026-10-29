@@ -134,7 +134,28 @@ def init(origin: str, script_name: str, state_dir: str, cookies_json: str = "{}"
     _S.update(app=app, client=Client(app, use_cookies=False), origin=origin.rstrip("/"),
               script_name=script_name.rstrip("/"), db_path=db_path, embed=embed,
               jar=CookieJar(json.loads(cookies_json or "{}")))
+    _spunta_ruoli_nei_concorsi_aperti()
     return diagnostics()
+
+
+def _spunta_ruoli_nei_concorsi_aperti() -> int:
+    """Demo, UNA SOLA VOLTA: spunta «un giocatore per ruolo» nei concorsi già aperti salvati nel browser.
+
+    I dati della demo restano nel browser: un concorso aperto creato prima della correzione avrebbe la casella
+    spenta. Il segno nel registro operazioni evita di rimetterla se lo staff la toglie di proposito."""
+    from FantaRF import db as dbm
+    from FantaRF.services import audit
+
+    conn = dbm.connect(_S["db_path"])
+    try:
+        if conn.execute("SELECT 1 FROM audit_log WHERE action = 'demo.one_per_role_open'").fetchone():
+            return 0
+        with dbm.transaction(conn):
+            n = conn.execute("UPDATE contests SET one_per_role = 1 WHERE status = 'open' AND one_per_role = 0").rowcount
+            audit.log(conn, None, "demo.one_per_role_open", "contest", None, {"concorsi_aggiornati": n})
+        return n
+    finally:
+        conn.close()
 
 
 def diagnostics() -> str:
