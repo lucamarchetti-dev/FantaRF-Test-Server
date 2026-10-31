@@ -1,7 +1,8 @@
 {% extends "base.html" %}
-{% from "_macros.html" import role_badge, serie_badge, team_label, pagination %}
+{% from "_macros.html" import role_badge, serie_badge, team_label, pagination, avg_vote %}
 {% block title %}Giocatori{% endblock %}
 {% block content %}
+{% set detail_args = {'stagione': season['id']} if season and is_staff and query_args.get('stagione') else {} %}
 <h1>Listone giocatori{% if season %} <span class="h1-sub">stagione {{ season['name'] }}</span>{% endif %}</h1>
 
 {% if not season %}
@@ -70,17 +71,18 @@
 {% else %}
 <table class="table players">
   <thead>
-    <tr><th scope="col">Giocatore</th><th scope="col">Ruolo</th><th scope="col">Squadra</th><th scope="col" class="col-serie">Serie</th>{% if is_staff %}<th scope="col">Stato</th>{% endif %}</tr>
+    <tr><th scope="col">Giocatore</th><th scope="col">Ruolo</th><th scope="col">Squadra</th><th scope="col" class="col-serie">Serie</th><th scope="col" class="col-media">Media voti</th>{% if is_staff %}<th scope="col">Stato</th>{% endif %}</tr>
   </thead>
   <tbody>
   {% for p in result.rows %}
     <tr class="band band-{{ p['ruolo'] }}">
-      <td data-label="Giocatore"><span class="pname">{{ p['full_name'] }}</span> <span class="pid">#{{ p['external_id'] }}</span></td>
+      <td data-label="Giocatore"><a class="pname pname-link" href="{{ url_for('players.detail', player_id=p['player_id'], **detail_args) }}">{{ p['full_name'] }}<span class="sr-only"> (storico voti)</span></a> <span class="pid">#{{ p['external_id'] }}</span></td>
       <td data-label="Ruolo"><span class="role-dot role-{{ p['ruolo'] }}" title="{{ ROLE_LABELS[p['ruolo']] }}"><span aria-hidden="true">{{ p['ruolo'] }}</span><span class="sr-only">{{ ROLE_LABELS[p['ruolo']] }}</span></span> <span class="role-text">{{ ROLE_LABELS[p['ruolo']] }}</span></td>
       <td data-label="Squadra">{{ team_label(p['team']) }}</td>
       <td data-label="Serie" class="col-serie">{{ serie_badge(p['serie']) }}</td>
+      <td data-label="Media voti" class="col-media">{{ avg_vote(averages.get(p['player_id'])) }}</td>
       {% if is_staff %}
-      <td data-label="Stato">
+      <td data-label="Stato" class="col-state">
         <form method="post" action="{{ url_for('staff.player_toggle', psd_id=p['psd_id']) }}" class="inline">
           <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
           <input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}">
