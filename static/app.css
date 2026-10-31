@@ -475,7 +475,6 @@ body.page-standings-index h3 { margin-top: 1.1rem; }
   .players .band td:nth-child(4) { grid-column: 3; }
   .players .band td.col-serie { width: auto; white-space: nowrap; }
   .players .band td.col-serie::before { display: inline; content: "Serie"; margin-right: .4rem; font-size: .75rem; font-weight: 700; color: var(--muted); }
-  .players .band td:nth-child(5) { grid-column: 1 / -1; }
   .role-text { display: none; }
   .filters { gap: .6rem; padding: .75rem; }
   .filters .field { flex: 1 1 8rem; }
@@ -564,6 +563,44 @@ details > summary { cursor: pointer; }
 .weights-table input.num { min-width: 0; width: 5.5rem; }
 .sheet-panel .role { margin-right: .4rem; }
 .btn[disabled] { cursor: not-allowed; }
+
+/* ---- media voti e scheda giocatore ---- */
+.pname-link { color: var(--ink); text-decoration-color: var(--line-strong); }
+.pname-link:hover { color: var(--primary-ink); }
+.avg { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.avg-num { font-family: var(--display); font-size: 1.05rem; font-weight: 800; color: var(--primary-ink); }
+.avg-none .avg-num { color: var(--muted); font-weight: 600; }
+.avg-n { color: var(--muted); font-size: .75rem; }
+.avg-label { display: none; color: var(--muted); font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.players .col-media { text-align: right; white-space: nowrap; width: 1%; }
+.result .avg { flex: none; min-width: 3.4rem; align-items: center; text-align: center; }
+.result .avg-label { display: block; }
+.result.is-blocked .avg-num { color: var(--muted); }
+.player-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .9rem; margin: 0 0 1.1rem; }
+.player-meta .role { margin-right: -.5rem; }
+.empty-state { color: var(--muted); margin: 0; }
+.vote-num { font-family: var(--display); font-size: 1.1rem; font-weight: 800; color: var(--primary-ink); }
+.trend { margin: 0 0 1rem; }
+.trend-svg { display: block; width: 100%; max-width: 34rem; height: auto; }
+.trend-axis { stroke: var(--line-strong); stroke-width: 1; }
+.trend-avg { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.trend-line { fill: none; stroke: var(--primary); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.trend-dot { fill: var(--surface); stroke: var(--primary); stroke-width: 2.5; }
+.trend-text { fill: var(--muted); font-size: 11px; font-family: var(--body); }
+@media (forced-colors: active) { .trend-line, .trend-dot { stroke: CanvasText; } .trend-avg, .trend-axis { stroke: GrayText; } }
+@media (max-width: 42rem) {
+  /* listone su telefono: riga 1 = nome + media, riga 2 = ruolo, squadra, serie */
+  .players .band td:first-child { grid-column: 1 / 3; }
+  .players .band td.col-media { grid-column: 3; grid-row: 1; text-align: right; width: auto; }
+  .players .band td.col-media .avg-label { display: block; }
+  .players .band td.col-state { grid-column: 1 / -1; }
+  /* selettore formazione su telefono: la media va su una riga sotto il nome, per non stringere squadra e pulsante */
+  .result { flex-wrap: wrap; }
+  .result .avg { order: 5; flex: 1 0 100%; min-width: 0; flex-direction: row; align-items: baseline; justify-content: flex-start; gap: .45rem;
+                 margin-left: 2.4rem; text-align: left; }
+  .result .avg-num { font-size: 1rem; }
+  .vote-history th[scope="row"] { font-size: 1rem; }
+}
 
 /* ---- stampa: solo il contenuto, su carta bianca ---- */
 @media print {

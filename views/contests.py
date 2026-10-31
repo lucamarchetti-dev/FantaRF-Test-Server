@@ -8,6 +8,7 @@ from ..db import get_db
 from ..services import admission
 from ..services import contests as contests_svc
 from ..services import lineups as lineups_svc
+from ..services import player_votes as votes_svc
 from ..services import players as players_svc
 from ..services import results as results_svc
 from ..services import seasons as seasons_svc
@@ -48,12 +49,19 @@ def detail(contest_id):
 def _builder_context(db, contest, selected_ids, team_name, errors=(), warnings=()):
     season_id = contest["season_id"]
     players = players_svc.all_selectable(db, season_id)
+    # media dei voti ufficiali già formattata ("m") e numero di voti ("c"): solo per chi ne ha, gli altri restano senza
+    averages = votes_svc.display_averages(db, season_id, None)
+    for p in players:
+        a = averages.get(p["id"])
+        if a:
+            p["m"], p["c"] = a["text"], a["n"]
     # stemmi disponibili, per nome squadra: dove manca il file il selettore mostra lo spazio vuoto
     crests = {t: url for t in {p["t"] for p in players} if (url := crest_url(t))}
     return dict(
         contest=contest,
         players=players,
         crests=crests,
+        player_url=url_for("players.detail", player_id=0),   # il JS sostituisce lo 0 finale con l'id del giocatore
         selected_ids=selected_ids,
         team_name=team_name,
         errors=list(errors),

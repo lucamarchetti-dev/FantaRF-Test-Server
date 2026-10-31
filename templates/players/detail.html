@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_macros.html" import role_badge, serie_badge, team_label %}
+{% block title %}{{ player['full_name'] }}{% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('players.listing', **stagione_arg) }}">← Listone giocatori</a></p>
+<h1>{{ player['full_name'] }} <span class="h1-sub">stagione {{ season['name'] }}</span></h1>
+<p class="player-meta">
+  {{ role_badge(player['ruolo']) }}
+  <span>{{ ROLE_LABELS[player['ruolo']] }}</span>
+  {{ team_label(player['team'], player['serie']) }}
+  <span class="pid">#{{ player['external_id'] }}</span>
+  {% if not player['selectable'] %}<span class="tag tag-off">Non selezionabile</span>{% endif %}
+</p>
+
+<section class="panel" aria-labelledby="media-h">
+  <h2 id="media-h">Media voti</h2>
+  {% if hist.n %}
+    <p class="score"><span class="score-num">{{ hist.avg_text }}</span></p>
+    <p class="muted">Media dei voti finali di {{ hist.n }} {{ 'concorso pubblicato' if hist.n == 1 else 'concorsi pubblicati' }} in questa stagione.</p>
+  {% else %}
+    <p class="empty-state">Nessun voto pubblicato: <strong>media non disponibile</strong>. Il giocatore non è ancora stato valutato in un concorso pubblicato di questa stagione.</p>
+  {% endif %}
+</section>
+
+<section class="panel" aria-labelledby="storico-h">
+  <h2 id="storico-h">Andamento dei voti</h2>
+  {% if chart %}
+  <figure class="trend">
+    <svg class="trend-svg" viewBox="0 0 {{ chart.w }} {{ chart.h }}" role="img" aria-labelledby="trend-t trend-d" focusable="false">
+      <title id="trend-t">Andamento dei voti di {{ player['full_name'] }}</title>
+      <desc id="trend-d">Dal concorso {{ chart.points[0].number }} al concorso {{ chart.points[-1].number }}: voto minimo {{ chart.bottom_label }}, massimo {{ chart.top_label }}, media {{ hist.avg_text }}. I valori di ogni concorso sono nella tabella qui sotto.</desc>
+      <line class="trend-axis" x1="{{ chart.left }}" y1="{{ chart.base }}" x2="{{ chart.right }}" y2="{{ chart.base }}"/>
+      {% if chart.avg_y is not none %}<line class="trend-avg" x1="{{ chart.left }}" y1="{{ chart.avg_y }}" x2="{{ chart.right }}" y2="{{ chart.avg_y }}"/>{% endif %}
+      <polyline class="trend-line" points="{{ chart.line }}"/>
+      {% for pt in chart.points %}
+      <circle class="trend-dot" cx="{{ pt.x }}" cy="{{ pt.y }}" r="4"><title>{{ pt.label }}</title></circle>
+      {% endfor %}
+      <text class="trend-text" x="{{ chart.left - 5 }}" y="{{ chart.top_y + 4 }}" text-anchor="end">{{ chart.top_label }}</text>
+      <text class="trend-text" x="{{ chart.left - 5 }}" y="{{ chart.bottom_y + 4 }}" text-anchor="end">{{ chart.bottom_label }}</text>
+      <text class="trend-text" x="{{ chart.points[0].x }}" y="{{ chart.h - 8 }}" text-anchor="start">n. {{ chart.points[0].number }}</text>
+      <text class="trend-text" x="{{ chart.points[-1].x }}" y="{{ chart.h - 8 }}" text-anchor="end">n. {{ chart.points[-1].number }}</text>
+    </svg>
+    <figcaption class="muted">Dal meno al più recente. La linea tratteggiata è la media.</figcaption>
+  </figure>
+  {% endif %}
+
+  {% if hist.entries %}
+  <table class="table simple compact vote-history">
+    <thead><tr><th scope="col">Concorso</th><th scope="col">Data</th><th scope="col">Voto finale</th><th scope="col">Nota</th></tr></thead>
+    <tbody>
+    {% for e in hist.entries %}
+      <tr>
+        <th scope="row" data-label="Concorso"><a href="{{ url_for('contests.detail', contest_id=e.contest_id) }}">{{ e.name }}</a></th>
+        <td data-label="Data">{{ (e.closes_at|localtime)[:10] }}</td>
+        <td data-label="Voto finale"><strong class="vote-num">{{ e.vote_text }}</strong></td>
+        <td data-label="Nota">{% if e.manual %}<span class="tag">Inserito dallo staff</span>{% elif e.played_none %}<span class="tag">Senza partite giocate (SV)</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">Sono mostrati solo i voti dei concorsi pubblicati. «Data» è la scadenza del concorso.</p>
+  {% else %}
+  <p class="empty-state">Nessun voto pubblicato per questo giocatore: lo storico comparirà dopo la pubblicazione del primo concorso in cui verrà valutato.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -18,6 +18,14 @@
 <span class="team-label">{{ crest(team) }}<span class="team-name">{{ team }}</span>{% if serie %}{{ serie_badge(serie) }}{% endif %}</span>
 {%- endmacro %}
 
+{#- Media dei voti ufficiali: a = {"text": "6,75", "n": 3} oppure None (nessun voto pubblicato: «—», mai 0). -#}
+{% macro avg_vote(a) -%}
+<span class="avg{% if not a %} avg-none{% endif %}"><span class="avg-label">Media</span>
+{%- if a %} <strong class="avg-num">{{ a.text }}</strong><span class="avg-n">{{ a.n }} {{ 'voto' if a.n == 1 else 'voti' }}</span>
+{%- else %} <span class="avg-num" aria-hidden="true">—</span><span class="sr-only">nessun voto pubblicato</span>{% endif -%}
+</span>
+{%- endmacro %}
+
 {% macro csrf() -%}
 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
 {%- endmacro %}

@@ -161,11 +161,24 @@ def search_players(db, season_id: int, *, q: str = "", serie: str = "", ruolo: s
     pages = max(1, -(-total // per_page))
     page = min(max(1, page), pages)
     rows = db.execute(
-        "SELECT psd.id AS psd_id, p.external_id, psd.full_name, psd.serie, psd.ruolo, psd.selectable, "
+        "SELECT psd.id AS psd_id, p.id AS player_id, p.external_id, psd.full_name, psd.serie, psd.ruolo, psd.selectable, "
         "t.name AS team " + base + " ORDER BY p.search_name, p.external_id LIMIT ? OFFSET ?",
         params + [per_page, (page - 1) * per_page],
     ).fetchall()
     return {"rows": rows, "total": total, "page": page, "pages": pages, "per_page": per_page}
+
+
+def get_player(db, season_id: int, player_id: int) -> dict | None:
+    """Dati correnti di un giocatore nel listone di una stagione (None se non c'e')."""
+    row = db.execute(
+        """SELECT p.id AS player_id, p.external_id, psd.full_name, psd.serie, psd.ruolo, psd.selectable, t.name AS team
+             FROM player_season_data psd
+             JOIN players p ON p.id = psd.player_id
+             JOIN teams t ON t.id = psd.team_id
+            WHERE psd.season_id = ? AND psd.player_id = ? AND psd.valid_to IS NULL""",
+        (season_id, player_id),
+    ).fetchone()
+    return dict(row) if row else None
 
 
 def teams_in_season(db, season_id: int) -> list[dict]:

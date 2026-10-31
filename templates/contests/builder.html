@@ -63,6 +63,6 @@
 </div>
 <p id="announce" class="sr-only" role="status"></p>
 
-<script type="application/json" id="builder-data">{{ {"players": players, "crests": crests, "selected": selected_ids, "onePerRole": contest.one_per_role == 1, "roles": ROLE_LABELS}|tojson }}</script>
+<script type="application/json" id="builder-data">{{ {"players": players, "crests": crests, "selected": selected_ids, "onePerRole": contest.one_per_role == 1, "roles": ROLE_LABELS, "playerUrl": player_url}|tojson }}</script>
 <script src="{{ url_for('static', filename='lineup.js') }}" defer></script>
 {% endblock %}

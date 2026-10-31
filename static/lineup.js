@@ -59,6 +59,32 @@
     l.appendChild(crest(team)); l.appendChild(make("span", "team-name", team)); l.appendChild(serieBadge(serie));
     return l;
   }
+  // Nome del giocatore come collegamento alla sua scheda (media e storico voti). Si apre in una nuova scheda
+  // del browser, cosi' la formazione che si sta componendo non va persa.
+  function playerName(p) {
+    var strong = make("strong");
+    if (!data.playerUrl) { strong.textContent = p.n; return strong; }
+    var a = make("a", "pname-link", p.n);
+    a.href = data.playerUrl.replace(/0$/, String(p.id));
+    a.target = "_blank"; a.rel = "noopener";
+    a.appendChild(make("span", "sr-only", " (storico voti, si apre in una nuova scheda)"));
+    strong.appendChild(a);
+    return strong;
+  }
+  // Media dei voti ufficiali. Senza voti pubblicati: «—» (e lo dice anche a voce), mai 0.
+  function average(p) {
+    var box = make("span", "avg" + (p.m ? "" : " avg-none"));
+    box.appendChild(make("span", "avg-label", "Media"));
+    if (p.m) {
+      box.appendChild(make("strong", "avg-num", p.m));
+      box.appendChild(make("span", "avg-n", p.c + (p.c === 1 ? " voto" : " voti")));
+    } else {
+      var dash = make("span", "avg-num", "\u2014"); dash.setAttribute("aria-hidden", "true");
+      box.appendChild(dash);
+      box.appendChild(make("span", "sr-only", "nessun voto pubblicato"));
+    }
+    return box;
+  }
   function sortSel(list) {
     return list.slice().sort(function (a, b) {
       return (ROLE_ORDER[a.r] - ROLE_ORDER[b.r]) || a.k.localeCompare(b.k);
@@ -183,11 +209,12 @@
       li.setAttribute("data-id", p.id);
       li.appendChild(roleBadge(p.r));
       var info = make("span", "slot-info");
-      info.appendChild(make("strong", null, p.n));
+      info.appendChild(playerName(p));
       var sub = make("span", "slot-sub"); sub.appendChild(teamLabel(p.t, p.s));
       info.appendChild(sub);
       if (reason) { info.appendChild(make("span", "why", reason)); }
       li.appendChild(info);
+      li.appendChild(average(p));
       if (reason) {
         // Riga non selezionabile: niente pulsante, il motivo e' scritto in chiaro sotto il nome.
         li.setAttribute("aria-disabled", "true");
