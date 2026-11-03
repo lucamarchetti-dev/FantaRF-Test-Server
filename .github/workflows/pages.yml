@@ -4,7 +4,7 @@ name: Demo su GitHub Pages
 # Prima volta: Settings → Pages → Build and deployment → Source: «GitHub Actions».
 on:
   push:
-    branches: [main]
+    branches: [fix/strikes]
   workflow_dispatch:
 
 permissions:
