@@ -157,13 +157,12 @@ def main() -> int:
         st, _, html, _ = br.get(loc[len(ORIGIN):] if loc.startswith(ORIGIN) else loc)
         check("anteprima dell'importazione → 200", st == 200 and "righe" in html.lower())
 
-    print("Un giocatore per ruolo (concorso demo)")
+    print("Un giocatore per ruolo (sempre obbligatorio)")
     import sqlite3
     dbc = sqlite3.connect(state / B.DB_NAME)
     dbc.row_factory = sqlite3.Row
-    contest = dbc.execute("SELECT id, one_per_role FROM contests ORDER BY id LIMIT 1").fetchone()
-    check("il concorso demo richiede un giocatore per ruolo", contest is not None and contest["one_per_role"] == 1,
-          str(dict(contest) if contest else None))
+    contest = dbc.execute("SELECT id FROM contests ORDER BY id LIMIT 1").fetchone()
+    check("il concorso demo esiste", contest is not None, str(dict(contest) if contest else None))
     rows = dbc.execute("SELECT player_id, serie, ruolo, team_id FROM player_season_data "
                        "WHERE valid_to IS NULL AND selectable = 1").fetchall()
 
@@ -201,7 +200,7 @@ def main() -> int:
     before = lineups_count()
     st, body = post_lineup(dup)
     check("due difensori (ruolo ripetuto) → respinta con il motivo",
-          "serve un giocatore per ruolo" in body and lineups_count() == before, f"{st}")
+          "un giocatore per ciascun ruolo" in body and lineups_count() == before, f"{st}")
     ok_ids = pick(["P", "D", "T", "C", "W", "A"])
     check("trovati giocatori per la prova con un ruolo ciascuno", ok_ids is not None)
     st, body = post_lineup(ok_ids)
