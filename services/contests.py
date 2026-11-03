@@ -96,8 +96,7 @@ def ready_for_contest(db, season_id: int) -> bool:
 
 
 def create_contest(db, *, season_id: int, number: int, name: str | None, opens_at: datetime | None,
-                   closes_at: datetime | None, info: str | None, one_per_role: bool, actor_id,
-                   matches_count: int = 2) -> int:
+                   closes_at: datetime | None, info: str | None, actor_id, matches_count: int = 2) -> int:
     if number is None or number < 1:
         raise ContestError("Il numero del concorso deve essere un intero positivo.")
     _check_window(opens_at, closes_at)
@@ -115,17 +114,16 @@ def create_contest(db, *, season_id: int, number: int, name: str | None, opens_a
             raise ContestError(f"Esiste già il concorso numero {number} in questa stagione.")
         cur = db.execute(
             "INSERT INTO contests (season_id, number, name, status, opens_at, closes_at, info, one_per_role, "
-            "matches_count, created_at, updated_at) VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?)",
+            "matches_count, created_at, updated_at) VALUES (?, ?, ?, 'draft', ?, ?, ?, 1, ?, ?, ?)",  # one_per_role: sempre 1
             (season_id, number, name, iso(opens_at) if opens_at else None, iso(closes_at), info,
-             1 if one_per_role else 0, matches_count, now, now))
+             matches_count, now, now))
         audit.log(db, actor_id, "contest.create", "contest", cur.lastrowid,
-                  {"number": number, "name": name, "closes_at": iso(closes_at), "one_per_role": bool(one_per_role),
-                   "matches_count": matches_count})
+                  {"number": number, "name": name, "closes_at": iso(closes_at), "matches_count": matches_count})
         return cur.lastrowid
 
 
 def update_contest(db, contest_id: int, *, name: str | None, opens_at: datetime | None, closes_at: datetime | None,
-                   info: str | None, one_per_role: bool, actor_id, matches_count: int | None = None) -> None:
+                   info: str | None, actor_id, matches_count: int | None = None) -> None:
     _check_window(opens_at, closes_at)
     info = _clean_info(info)
     with transaction(db):
@@ -138,17 +136,13 @@ def update_contest(db, contest_id: int, *, name: str | None, opens_at: datetime 
         changes: dict = {}
         if row["status"] == "closed":
             # Un concorso chiuso cambia solo nome e informazioni; per la scadenza serve la riapertura tracciata.
-            if iso(closes_at) != row["closes_at"] or bool(one_per_role) != bool(row["one_per_role"]):
-                raise ContestError("Un concorso chiuso non può cambiare scadenza o regole: usa «Riapri».")
+            if iso(closes_at) != row["closes_at"]:
+                raise ContestError("Un concorso chiuso non può cambiare scadenza: usa «Riapri».")
             opens_at_iso = row["opens_at"]
         else:
             opens_at_iso = iso(opens_at) if opens_at else None
-            if bool(one_per_role) != bool(row["one_per_role"]) and lineup_count(db, contest_id):
-                raise ContestError("Esistono già formazioni inviate: le regole non si possono cambiare a concorso avviato.")
             if iso(closes_at) != row["closes_at"]:
                 changes["closes_at"] = {"from": row["closes_at"], "to": iso(closes_at)}
-            if bool(one_per_role) != bool(row["one_per_role"]):
-                changes["one_per_role"] = {"from": bool(row["one_per_role"]), "to": bool(one_per_role)}
         if matches_count is None:
             matches_count = row["matches_count"]
         if matches_count not in (1, 2, 3, 4):
@@ -162,9 +156,9 @@ def update_contest(db, contest_id: int, *, name: str | None, opens_at: datetime 
         if info != row["info"]:
             changes["info"] = "modificate"
         db.execute(
-            "UPDATE contests SET name = ?, opens_at = ?, closes_at = ?, info = ?, one_per_role = ?, matches_count = ?, "
+            "UPDATE contests SET name = ?, opens_at = ?, closes_at = ?, info = ?, matches_count = ?, "
             "updated_at = ? WHERE id = ?",
-            (name, opens_at_iso, iso(closes_at), info, 1 if one_per_role else 0, matches_count, iso(utcnow()), contest_id))
+            (name, opens_at_iso, iso(closes_at), info, matches_count, iso(utcnow()), contest_id))
         if changes:
             audit.log(db, actor_id, "contest.update", "contest", contest_id, changes)
 

@@ -44,9 +44,7 @@
       <label for="info">Informazioni e partite della settimana</label>
       <textarea id="info" name="info" rows="5" maxlength="5000">{{ form.get('info', '') }}</textarea>
     </div>
-    <label class="check"><input type="checkbox" name="one_per_role" value="1" {% if form.get('one_per_role') %}checked{% endif %}>
-      Richiedi un giocatore per ogni ruolo (P, D, T, C, W, A)</label>
-    <p class="hint">Regola confermata: ogni ruolo compare una sola volta. Con la casella accesa la formazione con un ruolo ripetuto non si può inviare; spegnila solo per un concorso particolare.</p>
+    <p class="hint">Ruoli obbligatori in ogni concorso: un giocatore per ciascun ruolo (P, D, T, C, W, A).</p>
     <div><button class="btn" type="submit">Crea il concorso in bozza</button></div>
   </form>
 </section>

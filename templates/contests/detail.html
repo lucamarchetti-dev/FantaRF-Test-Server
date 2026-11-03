@@ -15,7 +15,7 @@
   {% if contest.effective == 'scheduled' %}<p>Le formazioni si potranno inviare da {{ contest.opens_at|datelong }}.</p>{% endif %}
   {% if contest.effective == 'closed' %}<p>Il concorso è chiuso: non si accettano più formazioni.</p>{% endif %}
   <p class="muted">Se invii più volte la formazione entro la scadenza, conta soltanto l'ultima.</p>
-  <p class="muted">Regole: sei giocatori, tre di Serie A e tre di Serie B, tutti di squadre diverse{% if contest.one_per_role %}; in questo concorso serve anche <strong>un giocatore per ciascun ruolo</strong> (P, D, T, C, W, A){% endif %}.</p>
+  <p class="muted">Regole: sei giocatori, tre di Serie A e tre di Serie B, tutti di squadre diverse, con <strong>un giocatore per ciascun ruolo</strong> (P, D, T, C, W, A).</p>
 </section>
 
 {% if contest.status == 'calculating' %}<p class="notice notice-warn" role="status">Il concorso è chiuso e i risultati sono in calcolo: il punteggio sarà visibile appena lo staff li pubblica.</p>{% endif %}

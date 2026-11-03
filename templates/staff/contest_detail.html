@@ -90,18 +90,13 @@
       <div class="field"><label for="opens_at">Apertura <span class="muted">(facoltativa)</span></label><input id="opens_at" name="opens_at" type="datetime-local" value="{{ open_input }}" {% if locked %}readonly{% endif %}></div>
       <div class="field"><label for="closes_at">Scadenza</label><input id="closes_at" name="closes_at" type="datetime-local" required value="{{ close_input }}" {% if locked %}readonly{% endif %}></div>
     </div>
-    {% if locked %}<p class="hint">Concorso chiuso: scadenza e regole si cambiano solo con «Riapri».</p>{% endif %}
+    {% if locked %}<p class="hint">Concorso chiuso: la scadenza si cambia solo con «Riapri».</p>{% endif %}
     <div class="field"><label for="info">Informazioni e partite della settimana</label><textarea id="info" name="info" rows="5" maxlength="5000">{{ contest.info }}</textarea></div>
     {% if not locked %}
     <div class="field"><label for="matches_count">Partite da valutare in questo concorso</label>
       <select id="matches_count" name="matches_count">{% for n in [2, 3] %}<option value="{{ n }}" {% if contest.matches_count == n %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
     {% endif %}
-    {% if not locked %}
-    <label class="check"><input type="checkbox" name="one_per_role" value="1" {% if contest.one_per_role %}checked{% endif %} {% if lineups %}disabled{% endif %}>
-      Richiedi un giocatore per ogni ruolo (P, D, T, C, W, A)</label>
-    <p class="hint">{% if lineups %}Esistono già formazioni: la regola non si può più cambiare.{% else %}Attivalo soltanto se lo staff ha confermato che è obbligatorio.{% endif %}</p>
-    {% if lineups and contest.one_per_role %}<input type="hidden" name="one_per_role" value="1">{% endif %}
-    {% endif %}
+    <p class="hint">Ruoli obbligatori in ogni concorso: un giocatore per ciascun ruolo (P, D, T, C, W, A).</p>
     <div><button class="btn" type="submit">Salva le modifiche</button></div>
   </form>
   {% endif %}

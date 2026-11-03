@@ -1,9 +1,8 @@
 """Validazione della formazione. Modulo puro: niente web, niente database.
 
-Regole CONFERMATE dal regolamento: sei giocatori, tre di Serie A e tre di Serie B, tutti di
-squadre diverse, tutti presenti nel listone ufficiale. Il vincolo "un giocatore per ruolo"
-(esempio del regolamento) e' confermato dallo staff ed e' acceso di default nei nuovi concorsi, ma resta un
-parametro per concorso (Rules.one_per_role).
+Regole: sei giocatori, tre di Serie A e tre di Serie B, tutti di squadre diverse, tutti presenti
+nel listone ufficiale e, in OGNI concorso, un giocatore per ciascuno dei sei ruoli (REQUIRED_ROLES).
+Il vincolo di ruolo non e' un parametro: vale sempre e non si puo' disattivare.
 """
 from __future__ import annotations
 
@@ -11,7 +10,9 @@ from dataclasses import dataclass, field
 
 from .listone import ROLES
 
-ROLE_ORDER = {r: i for i, r in enumerate(ROLES)}
+# Ruoli sempre obbligatori in ogni concorso: unica definizione, usata da validazione, servizi e template.
+REQUIRED_ROLES = ROLES
+ROLE_ORDER = {r: i for i, r in enumerate(REQUIRED_ROLES)}
 
 
 @dataclass(frozen=True)
@@ -30,7 +31,6 @@ class Rules:
     size: int = 6
     per_serie: int = 3
     distinct_teams: bool = True
-    one_per_role: bool = False
 
 
 @dataclass(frozen=True)
@@ -115,16 +115,8 @@ def validate(requested_ids: list[int], known: dict[int, Candidate], rules: Rules
         by_role.setdefault(c.ruolo, []).append(c)
     repeated = {r: g for r, g in by_role.items() if len(g) > 1}
     for r, group in repeated.items():
-        ids = tuple(c.player_id for c in group)
-        if rules.one_per_role:
-            v.errors.append(Issue(
-                "role_duplicate",
-                f"In questo concorso serve un giocatore per ruolo: hai scelto più giocatori con ruolo {r} ({_names(group)}).",
-                ids))
-        else:
-            v.warnings.append(Issue(
-                "roles_repeated",
-                f"Attenzione: hai più giocatori con ruolo {r} ({_names(group)}). Nell'esempio del regolamento ogni ruolo "
-                "compare una sola volta: chiedi allo staff se per questo concorso è richiesto.",
-                ids))
+        v.errors.append(Issue(
+            "role_duplicate",
+            f"In ogni concorso serve un giocatore per ciascun ruolo: hai scelto più giocatori con ruolo {r} ({_names(group)}).",
+            tuple(c.player_id for c in group)))
     return v

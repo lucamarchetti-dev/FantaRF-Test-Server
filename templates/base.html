@@ -19,7 +19,6 @@
       <a href="{{ url_for('contests.listing') }}" {% if request.endpoint and request.endpoint.startswith('contests.') %}aria-current="page"{% endif %}>Concorsi</a>
       <a href="{{ url_for('players.listing') }}" {% if request.endpoint == 'players.listing' %}aria-current="page"{% endif %}>Giocatori</a>
       <a href="{{ url_for('standings.index') }}" {% if request.endpoint and request.endpoint.startswith('standings.') %}aria-current="page"{% endif %}>Classifica</a>
-      {% if g.user %}<a href="{{ url_for('strikes.index') }}" {% if request.endpoint and (request.endpoint.startswith('strikes.') or request.endpoint.startswith('staff_strikes.')) %}aria-current="page"{% endif %}>Strike</a>{% endif %}
       {% if g.user and g.user['role'] == 'staff' %}
       <a href="{{ url_for('staff.index') }}" {% if request.endpoint and request.endpoint.startswith('staff.') %}aria-current="page"{% endif %}>Staff</a>
       {% endif %}
