@@ -92,7 +92,7 @@ def create_app(test_config: dict | None = None) -> Flask:
     app.jinja_env.globals.update(csrf_token=csrf_token, ROLE_LABELS=ROLE_LABELS, CONTEST_STATUS=STATUS_LABELS, app_version=__version__)
     crests.init_app(app)   # stemmi delle squadre (static/crests/)
 
-    from .views import auth, contests, main, players, staff, staff_contests, staff_results,staff_strikes, standings, strikes
+    from .views import auth, contests, main, players, staff, staff_contests, staff_results, standings
     app.register_blueprint(main.bp)
     app.register_blueprint(auth.bp)
     app.register_blueprint(players.bp)
@@ -102,8 +102,6 @@ def create_app(test_config: dict | None = None) -> Flask:
     app.register_blueprint(staff_results.bp)
     app.register_blueprint(staff_results.weights_bp)
     app.register_blueprint(standings.bp)
-    app.register_blueprint(staff_strikes.bp)
-    app.register_blueprint(strikes.bp)
 
     def render_error(code: int, title: str, message: str):
         return render_template("error.html", code=code, title=title, message=message), code

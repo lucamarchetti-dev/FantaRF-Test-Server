@@ -59,15 +59,14 @@ def index():
                 raise contests_svc.ContestError(str(exc)) from exc
             contest_id = contests_svc.create_contest(
                 db, season_id=season["id"], number=number, name=request.form.get("name"), opens_at=opens,
-                closes_at=closes, info=request.form.get("info"), one_per_role=request.form.get("one_per_role") == "1",
+                closes_at=closes, info=request.form.get("info"),
                 actor_id=g.user["id"], matches_count=_matches(request.form.get("matches_count")))
             flash("Concorso creato in bozza. Quando è pronto, aprilo dalla sua pagina.", "ok")
             return redirect(url_for("staff_contests.detail", contest_id=contest_id))
         except contests_svc.ContestError as exc:
             error = str(exc)
     else:
-        form = {"number": contests_svc.next_number(db, season["id"]), "closes_at": _default_close_input(), "matches_count": "2",
-                "one_per_role": "1" if current_app.config["DEFAULT_ONE_PER_ROLE"] else ""}
+        form = {"number": contests_svc.next_number(db, season["id"]), "closes_at": _default_close_input(), "matches_count": "2"}
     return render_template("staff/contests.html", season=season, contests=contests_svc.list_contests(db, season["id"], True),
                            form=form, error=error)
 
@@ -108,7 +107,6 @@ def update(contest_id):
         contests_svc.update_contest(
             get_db(), contest_id, name=request.form.get("name"), opens_at=opens, closes_at=closes,
             info=request.form.get("info"),
-            one_per_role=(request.form.get("one_per_role") == "1") if row["status"] != "closed" else bool(row["one_per_role"]),
             actor_id=g.user["id"],
             matches_count=(_matches(request.form.get("matches_count"), row["matches_count"]) if row["status"] != "closed" else None))
         flash("Modifiche salvate.", "ok")

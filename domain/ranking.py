@@ -1,7 +1,7 @@
 """Classifiche, punti, premi, premio fedeltà. Modulo puro: niente web, niente database.
 
 Confermato dal regolamento (PDF): premi settimanali 20.000/10.000/5.000; punti della generale 25-20-16-13-10-8-6-4-2-1 dal
-1° al 10° posto settimanale; premi finali dei primi otto; premio fedeltà 50.000 con tre strike di esclusione.
+1° al 10° posto settimanale; premi finali dei primi otto; premio fedeltà 50.000.
 NON definito dal regolamento (parametri, mai costanti nascoste): spareggio, scala della classifica a squadre, trattamento
 dei pari merito nella generale. Le scelte di default sono dichiarate nei commenti e in docs/DECISIONI.md.
 """
@@ -23,7 +23,6 @@ class Rules:
     points_scale: tuple[int, ...] = (25, 20, 16, 13, 10, 8, 6, 4, 2, 1)
     general_prizes: tuple[int, ...] = (200000, 150000, 100000, 70000, 60000, 50000, 40000, 30000)
     loyalty_prize: int = 50000
-    max_strikes: int = 3
     # Classifica a squadre: la tabella manca nel PDF. Valore iniziale = quello che l'Excel sembra usare (stessa scala dei
     # punti individuali); resta PROVVISORIA finche' lo staff non la conferma.
     team_scale: tuple[int, ...] = (25, 20, 16, 13, 10, 8, 6, 4, 2, 1)
@@ -178,26 +177,17 @@ def best_of_team(ranking: list[Ranked], team_of: dict[int, str]) -> dict[str, Ra
 class Loyalty:
     user_id: int
     eligible: bool
-    strikes: int
     missed: tuple[int, ...]
     reason: str           # '' se in regola; altrimenti perche' non e' (piu') idoneo
 
 
-def loyalty_status(contest_ids: list[int], played: dict[int, set[int]], strikes: dict[int, int], participants: list[int],
-                   max_strikes: int) -> list[Loyalty]:
-    """Idoneo = una giocata valida in OGNI concorso svolto e meno di `max_strikes` strike.
-    (L'assenza NON genera strike: toglie solo il premio fedeltà, come dice il regolamento.)"""
+def loyalty_status(contest_ids: list[int], played: dict[int, set[int]], participants: list[int]) -> list[Loyalty]:
+    """Idoneo = una giocata valida in OGNI concorso svolto (l'assenza toglie il premio fedeltà)."""
     out = []
     for uid in participants:
         missed = tuple(c for c in contest_ids if c not in played.get(uid, set()))
-        n = strikes.get(uid, 0)
-        if n >= max_strikes:
-            reason = f"{n} strike (limite {max_strikes})"
-        elif missed:
-            reason = f"ha saltato {len(missed)} concors{'o' if len(missed) == 1 else 'i'}"
-        else:
-            reason = ""
-        out.append(Loyalty(uid, not reason, n, missed, reason))
+        reason = f"ha saltato {len(missed)} concors{'o' if len(missed) == 1 else 'i'}" if missed else ""
+        out.append(Loyalty(uid, not reason, missed, reason))
     return out
 
 

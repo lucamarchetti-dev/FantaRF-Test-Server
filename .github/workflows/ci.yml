@@ -4,7 +4,7 @@ name: CI
 # Se è rosso, online resta l'ultima versione funzionante.
 on:
   push:
-    branches: [main]
+    branches: [fix/strikes]
   pull_request:
   workflow_dispatch:
 

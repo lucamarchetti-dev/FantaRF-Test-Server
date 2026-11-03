@@ -79,7 +79,8 @@ def load_candidates(db, season_id: int, ids: list[int]) -> dict[int, Candidate]:
 
 
 def rules_for(contest: dict) -> Rules:
-    return Rules(one_per_role=bool(contest["one_per_role"]))
+    """Le regole di validazione sono le stesse per ogni concorso: i sei ruoli sono sempre obbligatori."""
+    return Rules()
 
 
 def _reject(code: str, message: str, selected=None) -> SubmitResult:

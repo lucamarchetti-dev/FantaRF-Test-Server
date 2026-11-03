@@ -9,7 +9,6 @@
   var SIZE = 6, PER_SERIE = 3, PAGE = 40;
   var ROLES = ["P", "D", "T", "C", "W", "A"];
   var ROLE_ORDER = {}; ROLES.forEach(function (r, i) { ROLE_ORDER[r] = i; });
-  var onePerRole = !!data.onePerRole;
 
   function norm(s) { return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
   var byId = {};
@@ -108,7 +107,7 @@
     if (a.A > PER_SERIE) { problems.push("Troppi giocatori di Serie A"); }
     if (a.B > PER_SERIE) { problems.push("Troppi giocatori di Serie B"); }
     if (a.sameTeam.length) { problems.push("Due giocatori della stessa squadra"); }
-    if (onePerRole && a.dupRoles.length) { problems.push("Un ruolo è ripetuto"); }
+    if (a.dupRoles.length) { problems.push("Un ruolo è ripetuto"); }
     a.problems = problems;
     a.ok = problems.length === 0;
     return a;
@@ -120,7 +119,7 @@
     if (a[p.s] >= PER_SERIE) { return "Hai già " + PER_SERIE + " giocatori di Serie " + p.s; }
     var mates = a.teams[p.t.toLowerCase()];
     if (mates) { return "Hai già scelto " + mates[0].n + " (" + p.t + ")"; }
-    if (onePerRole && a.roles[p.r]) { return "Ruolo " + p.r + " già coperto da " + a.roles[p.r][0].n; }
+    if (a.roles[p.r]) { return "Ruolo " + p.r + " già coperto da " + a.roles[p.r][0].n; }
     return null;
   }
 
@@ -150,16 +149,11 @@
       }
       return li;
     }
-    if (onePerRole) {
-      ROLES.forEach(function (r) {
-        var here = sel.filter(function (p) { return p.r === r; });
-        if (here.length) { here.forEach(function (p) { el.slots.appendChild(filled(p)); }); }
-        else { el.slots.appendChild(empty(r + " – " + data.roles[r] + ": da scegliere", r)); }
-      });
-    } else {
-      sel.forEach(function (p) { el.slots.appendChild(filled(p)); });
-      for (var i = sel.length; i < SIZE; i++) { el.slots.appendChild(empty("Posto libero")); }
-    }
+    ROLES.forEach(function (r) {
+      var here = sel.filter(function (p) { return p.r === r; });
+      if (here.length) { here.forEach(function (p) { el.slots.appendChild(filled(p)); }); }
+      else { el.slots.appendChild(empty(r + " – " + data.roles[r] + ": da scegliere", r)); }
+    });
   }
 
   function renderRules(a) {
@@ -183,13 +177,9 @@
     } else {
       item(a.n === 0 ? "todo" : "ok", "Squadre tutte diverse");
     }
-    if (onePerRole) {
-      var covered = ROLES.filter(function (r) { return a.roles[r]; }).length;
-      item(a.dupRoles.length ? "bad" : (covered === SIZE ? "ok" : "todo"),
-        "Un giocatore per ruolo: " + covered + " ruoli su " + SIZE + " coperti" + (a.dupRoles.length ? " (ruolo ripetuto)" : ""));
-    } else if (a.dupRoles.length) {
-      item("warn", "Hai più giocatori con lo stesso ruolo. Nell'esempio del regolamento ogni ruolo compare una sola volta: chiedi allo staff se qui è richiesto.");
-    }
+    var covered = ROLES.filter(function (r) { return a.roles[r]; }).length;
+    item(a.dupRoles.length ? "bad" : (covered === SIZE ? "ok" : "todo"),
+      "Un giocatore per ruolo: " + covered + " ruoli su " + SIZE + " coperti" + (a.dupRoles.length ? " (ruolo ripetuto)" : ""));
   }
 
   function filtered() {

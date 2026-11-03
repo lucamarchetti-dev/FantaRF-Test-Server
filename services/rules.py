@@ -1,4 +1,4 @@
-"""Regole della stagione (scale di punti, premi, strike, spareggio): i default sono quelli del regolamento S13."""
+"""Regole della stagione (scale di punti, premi, spareggio): i default sono quelli del regolamento S13."""
 from __future__ import annotations
 
 import json
@@ -24,7 +24,7 @@ def get_rules(db, season_id: int) -> Rules:
         return base
     data = json.loads(row["rules_json"])
     kw = {k: tuple(data[k]) for k in LIST_FIELDS if k in data}
-    for k in ("loyalty_prize", "max_strikes", "team_scale_confirmed", "tiebreak"):
+    for k in ("loyalty_prize", "team_scale_confirmed", "tiebreak"):
         if k in data:
             kw[k] = data[k]
     return Rules(**{**base.__dict__, **kw})
@@ -36,7 +36,7 @@ def has_custom_rules(db, season_id: int) -> bool:
 
 def to_form(rules: Rules) -> dict:
     d = {k: ", ".join(str(x) for x in getattr(rules, k)) for k in LIST_FIELDS}
-    d.update(loyalty_prize=str(rules.loyalty_prize), max_strikes=str(rules.max_strikes), tiebreak=rules.tiebreak,
+    d.update(loyalty_prize=str(rules.loyalty_prize), tiebreak=rules.tiebreak,
              team_scale_confirmed="1" if rules.team_scale_confirmed else "")
     return d
 
@@ -72,7 +72,6 @@ def save_rules(db, season_id: int, form: dict, actor_id) -> None:
         general_prizes=_numbers(form.get("general_prizes"), "Premi finali", True),
         team_scale=_numbers(form.get("team_scale"), "Punti delle squadre", False),
         loyalty_prize=_int(form.get("loyalty_prize"), "Premio fedeltà", 0, MAX_AMOUNT),
-        max_strikes=_int(form.get("max_strikes"), "Strike massimi", 1, 20),
         team_scale_confirmed=form.get("team_scale_confirmed") == "1",
         tiebreak=form.get("tiebreak", ""))
     if rules.tiebreak not in TIEBREAK_MODES:
@@ -82,8 +81,7 @@ def save_rules(db, season_id: int, form: dict, actor_id) -> None:
             raise RulesError("Stagione inesistente.")
         before = to_form(get_rules(db, season_id))
         data = {k: list(getattr(rules, k)) for k in LIST_FIELDS}
-        data.update(loyalty_prize=rules.loyalty_prize, max_strikes=rules.max_strikes, team_scale_confirmed=rules.team_scale_confirmed,
-                    tiebreak=rules.tiebreak)
+        data.update(loyalty_prize=rules.loyalty_prize, team_scale_confirmed=rules.team_scale_confirmed, tiebreak=rules.tiebreak)
         db.execute("INSERT INTO season_rules (season_id, rules_json, updated_by, updated_at) VALUES (?, ?, ?, ?) "
                    "ON CONFLICT (season_id) DO UPDATE SET rules_json = excluded.rules_json, updated_by = excluded.updated_by, "
                    "updated_at = excluded.updated_at", (season_id, json.dumps(data), actor_id, utcnow_iso()))

@@ -1,10 +1,10 @@
 # FantaRF
 
 Webapp per il fantacalcio del GDR **RoleFootball / Progetto Football Manager**: i partecipanti compongono la formazione
-settimanale, lo staff inserisce i voti, l'app calcola i punteggi e produce classifiche e strike.
+settimanale, lo staff inserisce i voti, l'app calcola i punteggi e produce classifiche.
 
 **Stato: Fase 4 in corso** — fondamenta, utenti, stagioni, listone, concorsi e formazioni, voti e punteggi,
-classifica generale e strike sono funzionanti. Alcune parti della Fase 4 (premi, regole di stagione, squadre del GDR)
+classifica generale sono funzionanti. Alcune parti della Fase 4 (premi, regole di stagione, squadre del GDR)
 hanno la logica pronta ma **non ancora una pagina nello staff**: vedi [Cosa manca](#cosa-manca).
 
 ## Cosa funziona oggi
@@ -45,12 +45,8 @@ hanno la logica pronta ma **non ancora una pagina nello staff**: vedi [Cosa manc
 - Classifica settimanale con premi (20.000 / 10.000 / 5.000) e spareggio configurabile (ora d'invio dell'ultima versione o del primo invio).
 - Classifica generale a punti (25-20-16-13-10-8-6-4-2-1) con *countback* stile Formula 1; chi salta un concorso prende 0 punti per quella settimana.
 - Classifica a squadre del GDR: ogni settimana porta punti solo il miglior partecipante di ogni squadra.
-- Premio fedeltà (50.000): idoneo chi ha una giocata valida in **ogni** concorso svolto e meno di 3 strike.
+- Premio fedeltà (50.000): idoneo chi ha una giocata valida in **ogni** concorso svolto (l'assenza toglie il premio fedeltà).
 - Consultabile per stagione (`?stagione=`). Con pari merito su posizioni che pagano, il premio **non** viene assegnato in automatico: resta «da decidere» allo staff.
-
-**Strike**
-- Lo staff li assegna con motivo obbligatorio (`/staff/strike`); non si cancellano mai: uno strike sbagliato si **annulla** e resta nello storico.
-- Il partecipante vede i propri strike in `/strike`. L'assenza da un concorso non genera strike (toglie solo il premio fedeltà).
 
 **Amministrazione**
 - Registro di tutte le operazioni amministrative (`/staff/registro`).
@@ -60,7 +56,7 @@ hanno la logica pronta ma **non ancora una pagina nello staff**: vedi [Cosa manc
 
 La logica c'è in `services/`, ma non è ancora collegata a una pagina dello staff:
 
-- **Regole di stagione** (scale di punti, premi, soglia strike, spareggio): oggi valgono i default del regolamento S13; `services/rules.py` sa già salvarle.
+- **Regole di stagione** (scale di punti, premi, spareggio): oggi valgono i default del regolamento S13; `services/rules.py` sa già salvarle.
 - **Squadre del GDR dei partecipanti** (`services/clubs.py`): la classifica a squadre compare solo se la scala è confermata, e per ora non c'è modo di assegnare le squadre dall'interfaccia.
 - **Accredito dei premi** (`credit_award` / `uncredit_award` in `services/standings.py`).
 
@@ -108,7 +104,7 @@ Tutti si lanciano come `flask --app . <comando>`.
 4. **Apri il concorso**: i partecipanti lo vedono in home e compongono la formazione.
 5. Alla scadenza si chiude da solo. «Chiudi ora» e «Riapri» (eccezionale, con motivo) sono nella pagina del concorso.
 
-Il vincolo «un giocatore per ruolo» (P, D, T, C, W, A) è una casella per concorso, **accesa di default**: con la casella accesa la formazione con un ruolo ripetuto non si può inviare. Lo staff può spegnerla per un singolo concorso.
+In **ogni** concorso la formazione deve avere un giocatore per ciascuno dei sei ruoli (P, D, T, C, W, A): con un ruolo ripetuto non si può inviare. Non è un'opzione e lo staff non può disattivarla.
 Il selettore delle formazioni richiede JavaScript.
 
 ## Risultati di un concorso
@@ -136,7 +132,6 @@ Il selettore delle formazioni richiede JavaScript.
 | `FANTAPG_LOGIN_MAX_FAILURES` / `FANTAPG_LOGIN_WINDOW_MINUTES` | `5` / `15` | Blocco temporaneo dopo tentativi falliti. |
 | `FANTAPG_TIMEZONE` | `Europe/Rome` | Fuso orario di visualizzazione e inserimento delle scadenze. |
 | `FANTAPG_DEADLINE_WEEKDAY` / `FANTAPG_DEADLINE_TIME` | `0` / `20:30` | Scadenza *proposta* per i nuovi concorsi (0 = lunedì). Modificabile per concorso. |
-| `FANTAPG_DEFAULT_ONE_PER_ROLE` | `1` | Valore iniziale di «un giocatore per ruolo» nei nuovi concorsi (`0` per spegnerlo). |
 | `FANTAPG_NOT_PLAYED_VOTE` | `5.5` | Non più usata dall'app web: il voto di chi non gioca nessuna partita segue il voto SV della stagione (Staff → Punteggi). |
 | `FANTAPG_MISSING_MATCH_VOTE` | `5.5` | Voto SV **predefinito**, valido finché lo staff non ne sceglie un altro per la stagione da Staff → Punteggi. |
 | `FANTAPG_SCORE_DECIMALS` | vuoto | Vuoto = valori esatti. Un numero arrotonda il voto a quei decimali. |
@@ -168,10 +163,10 @@ FantaRF/
   domain/       regole pure, senza web né database: listone, formazione, stato dei concorsi,
                 motore di calcolo esatto (scoring), classifiche e premi (ranking), lettura Excel
   services/     logica applicativa e accesso ai dati: utenti, stagioni, importazione, giocatori, concorsi,
-                formazioni, risultati, pesi, ammissione, regole, squadre, classifiche, strike, audit
-  views/        rotte web: main, auth, players, contests, standings, strikes, staff*, staff_contests,
-                staff_results, staff_strikes
-  migrations/   schema SQL versionato (001 iniziale · 002 concorsi · 003 risultati · 004 classifiche e strike · 005 voto SV)
+                formazioni, risultati, pesi, ammissione, regole, squadre, classifiche, audit
+  views/        rotte web: main, auth, players, contests, standings, staff*, staff_contests,
+                staff_results
+  migrations/   schema SQL versionato (001 iniziale · 002 concorsi · 003 risultati · 004 classifiche (la tabella `strikes` resta nello schema ma non è più usata) · 005 voto SV)
   templates/    pagine Jinja
   static/       CSS, JavaScript, stemmi delle squadre (crests/)
   crests.py     catalogo degli stemmi

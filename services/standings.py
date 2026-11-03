@@ -13,7 +13,7 @@ from ..db import transaction
 from ..domain.contest import effective_status
 from ..domain.ranking import Entry, Rules, best_of_team, general_standings, loyalty_status, rank_contest, team_standings
 from ..timeutil import iso, parse_iso, utcnow, utcnow_iso
-from . import admission, audit, clubs, strikes
+from . import admission, audit, clubs
 from .contests import view as contest_view
 
 
@@ -76,10 +76,10 @@ def loyalty(db, season_id: int, rules: Rules) -> list[dict]:
     for r in db.execute("SELECT l.user_id, l.contest_id FROM lineups l JOIN contests c ON c.id = l.contest_id WHERE c.season_id = ?", (season_id,)):
         played.setdefault(r["user_id"], set()).add(r["contest_id"])
     participants = [u for u in played if u not in excl]
-    st = {l.user_id: l for l in loyalty_status([c["id"] for c in contests], played, strikes.counts(db, season_id), participants, rules.max_strikes)}
+    st = {l.user_id: l for l in loyalty_status([c["id"] for c in contests], played, participants)}
     names = _names(db, participants)
     cname = {c["id"]: c["name"] for c in contests}
-    out = [{"user_id": u, "name": names[u], "eligible": st[u].eligible, "strikes": st[u].strikes, "reason": st[u].reason,
+    out = [{"user_id": u, "name": names[u], "eligible": st[u].eligible, "reason": st[u].reason,
             "missed": [cname[c] for c in st[u].missed]} for u in participants]
     return sorted(out, key=lambda x: (not x["eligible"], x["name"].casefold()))
 
@@ -87,11 +87,11 @@ def loyalty(db, season_id: int, rules: Rules) -> list[dict]:
 def general(db, season_id: int, rules: Rules) -> dict:
     rankings = season_rankings(db, season_id, rules)
     standings = general_standings(_ranked_map(rankings), rules)
-    teams, strike_n = clubs.team_map(db, season_id), strikes.counts(db, season_id)
+    teams = clubs.team_map(db, season_id)
     names = _names(db, [s.key for s in standings])
     loy = {l["user_id"]: l for l in loyalty(db, season_id, rules)}
     rows = [{"rank": s.rank, "tied": s.tied, "user_id": s.key, "name": names[s.key], "points": s.points, "positions": s.positions,
-             "prize": s.prize, "prize_pending": s.prize_pending, "club": teams.get(s.key), "strikes": strike_n.get(s.key, 0),
+             "prize": s.prize, "prize_pending": s.prize_pending, "club": teams.get(s.key),
              "loyalty": loy.get(s.key)} for s in standings]
     return {"rankings": rankings, "rows": rows, "contests": [r["contest"] for r in rankings]}
 
@@ -119,8 +119,8 @@ def user_summary(db, season_id: int, user_id: int, rules: Rules) -> dict:
             last = {"contest": r["contest"], "position": mine["position"], "total": mine["total"], "prize": mine["prize"]}
             break
     mine_loy = next((l for l in loyalty(db, season_id, rules) if l["user_id"] == user_id), None)
-    return {"general": row, "last": last, "strikes": strikes.counts(db, season_id).get(user_id, 0), "loyalty": mine_loy,
-            "club": clubs.team_map(db, season_id).get(user_id), "max_strikes": rules.max_strikes, "participants": len(g["rows"])}
+    return {"general": row, "last": last, "loyalty": mine_loy,
+            "club": clubs.team_map(db, season_id).get(user_id), "participants": len(g["rows"])}
 
 
 # ------------------------------------------------------------------------- premi
