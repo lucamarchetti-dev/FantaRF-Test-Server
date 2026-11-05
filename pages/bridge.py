@@ -28,6 +28,7 @@ DB_NAME = "fantapg.sqlite3"
 
 DEMO_ADMIN = ("admin", "Amministratore demo", "DemoAdmin-2026")
 DEMO_TESTER = ("tester", "Partecipante demo", "DemoTester-2026")
+DEMO_TESTER_TEAM = "Squadra demo"      # i partecipanti hanno sempre una squadra (obbligatoria)
 
 _S: dict = {}          # stato del ponte: app, client, cookie, percorsi
 

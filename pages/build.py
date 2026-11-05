@@ -71,7 +71,8 @@ def build_demo_db(dest: Path) -> None:
         for username, display, password in (bridge.DEMO_ADMIN, bridge.DEMO_TESTER):
             role = "staff" if (username, display, password) == bridge.DEMO_ADMIN else "user"
             users_svc.create_user(conn, username=username, display_name=display, role=role,
-                                  password=password, actor_id=None, must_change=False)
+                                  password=password, actor_id=None, must_change=False,
+                                  team_name=bridge.DEMO_TESTER_TEAM if role == "user" else None)
         conn.execute("VACUUM")
     finally:
         conn.close()

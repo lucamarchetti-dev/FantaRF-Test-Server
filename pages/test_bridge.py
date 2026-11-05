@@ -122,10 +122,17 @@ def main() -> int:
     check("pagina Punteggi con il campo SV", status == 200 and 'name="sv_vote"' in html)
     status, _, html, url, _ = br.form_post(PREFIX + "/staff/utenti", {
         "_csrf": br.csrf(PREFIX + "/staff/utenti"), "username": "nuovo-utente", "display_name": "Nuovo", "role": "user",
+        "team_name": "Squadra nuova",
         })
     temp = re.search(r"Password provvisoria</dt>\s*<dd><code>([^<]+)</code>", html)
     check("creazione utente dalla demo: mostra la password provvisoria",
           status == 200 and "nuovo-utente" in html and temp is not None, f"{status}")
+    check("la schermata delle credenziali mostra la squadra", "Squadra nuova" in html)
+    status, _, html2, _, _ = br.form_post(PREFIX + "/staff/utenti", {
+        "_csrf": br.csrf(PREFIX + "/staff/utenti"), "username": "senza-squadra", "display_name": "Senza", "role": "user"})
+    check("un partecipante senza squadra viene rifiutato", "squadra è obbligatoria" in html2 and "<code>senza-squadra</code>" not in html2, f"{status}")
+    status, _, html3, _ = br.get(PREFIX + "/classifica/squadre")
+    check("pagina Classifica a squadre → 200", status == 200 and "Classifica a squadre" in html3, f"{status}")
     temp_pw = temp.group(1) if temp else ""
     other = Browser(B)
     saved_jar = B.cookies_json()
