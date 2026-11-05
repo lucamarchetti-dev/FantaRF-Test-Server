@@ -2,8 +2,10 @@
 
 Confermato dal regolamento (PDF): premi settimanali 20.000/10.000/5.000; punti della generale 25-20-16-13-10-8-6-4-2-1 dal
 1° al 10° posto settimanale; premi finali dei primi otto; premio fedeltà 50.000.
-NON definito dal regolamento (parametri, mai costanti nascoste): spareggio, scala della classifica a squadre, trattamento
-dei pari merito nella generale. Le scelte di default sono dichiarate nei commenti e in docs/DECISIONI.md.
+Classifica a squadre (confermata dallo staff): stessa scala 25-20-16-13-10-8-6-4-2-1, ma applicata a una classifica
+SEPARATA in cui ogni squadra compare una volta sola per concorso, con il suo miglior partecipante (si scorre TUTTA la classifica
+individuale, non solo i primi 10: se un doppione viene tolto, chi sta sotto sale).
+NON definito dal regolamento (parametri, mai costanti nascoste): spareggio, trattamento dei pari merito nella generale. Le scelte di default sono dichiarate nei commenti e in docs/DECISIONI.md.
 """
 from __future__ import annotations
 
@@ -23,10 +25,9 @@ class Rules:
     points_scale: tuple[int, ...] = (25, 20, 16, 13, 10, 8, 6, 4, 2, 1)
     general_prizes: tuple[int, ...] = (200000, 150000, 100000, 70000, 60000, 50000, 40000, 30000)
     loyalty_prize: int = 50000
-    # Classifica a squadre: la tabella manca nel PDF. Valore iniziale = quello che l'Excel sembra usare (stessa scala dei
-    # punti individuali); resta PROVVISORIA finche' lo staff non la conferma.
+    # Classifica a squadre: la scala e' quella dei punti individuali, confermata dallo staff.
     team_scale: tuple[int, ...] = (25, 20, 16, 13, 10, 8, 6, 4, 2, 1)
-    team_scale_confirmed: bool = False
+    team_scale_confirmed: bool = True
     tiebreak: str = "latest_version"
 
 
@@ -140,34 +141,73 @@ def _assign_prizes(ordered: list[Standing], prizes: tuple[int, ...]) -> list[Sta
 # ---------------------------------------------------------------- classifica a squadre
 
 
-def team_standings(rankings: dict[int, list[Ranked]], team_of: dict[int, str], rules: Rules) -> tuple[list[Standing], dict[int, str]]:
-    """Ogni settimana porta punti solo il MIGLIORE di ogni squadra; le squadre si ordinano per la posizione del loro migliore
-    e si applica la scala delle squadre. Restituisce anche, per ogni concorso, i partecipanti senza squadra (ignorati)."""
+def normalize_team(name: str | None) -> str:
+    """Spazi superflui tolti: 'Ravenna ' e ' Ravenna' sono la stessa squadra."""
+    return " ".join((name or "").split())
+
+
+def team_key(name: str | None) -> str:
+    """Chiave di confronto del nome squadra: senza spazi superflui e senza differenza tra maiuscole e minuscole."""
+    return normalize_team(name).casefold()
+
+
+@dataclass(frozen=True)
+class TeamScore:
+    """Il risultato di una squadra in UN concorso: la sua posizione nella classifica a squadre, i punti e chi li ha portati."""
+    team: str
+    position: int           # posizione nella classifica a squadre del concorso (1, 2, 3, ...)
+    points: int
+    ranked: Ranked          # il miglior partecipante della squadra (con la sua posizione INDIVIDUALE)
+
+
+def team_contest_ranking(ranking: list[Ranked], team_of: dict[int, str], rules: Rules) -> list[TeamScore]:
+    """Classifica a squadre di un concorso, costruita dalla classifica individuale (gia' in ordine di merito).
+
+    - Si scorre TUTTA la classifica individuale, anche oltre il 10° posto: quando un partecipante viene escluso perche' una
+      squadra e' gia' rappresentata piu' in alto, le posizioni successive scalano e chi stava sotto (11°, 12°, ...) sale.
+      Se tolgono piu' doppioni, salgono altri partecipanti. Prendono punti le prime posizioni di squadra della scala (10).
+    - Per ogni squadra conta solo il PRIMO (il migliore) che si incontra: gli altri della stessa squadra sono esclusi
+      e le posizioni successive scalano. NON si sommano i punti individuali.
+    - Chi non ha una squadra non genera punti per nessuno e non da' errori: viene saltato.
+    - Il punteggio e' quello della scala delle squadre in base alla NUOVA posizione (non a quella individuale).
+    """
+    seen: set[str] = set()
+    out: list[TeamScore] = []
+    for r in ranking:
+        if len(out) >= len(rules.team_scale):      # le posizioni oltre la scala non danno punti: inutile proseguire
+            break
+        name = normalize_team(team_of.get(r.entry.user_id))
+        key = name.casefold()
+        if not name or key in seen:
+            continue
+        seen.add(key)
+        pos = len(out) + 1
+        out.append(TeamScore(name, pos, points_for(pos, rules.team_scale), r))
+    return out
+
+
+def team_standings(rankings: dict[int, list[Ranked]], team_of_by_contest: dict[int, dict[int, str]],
+                   rules: Rules) -> tuple[list[Standing], dict[int, list[TeamScore]]]:
+    """Classifica generale a squadre: somma, concorso per concorso, dei punti della classifica a squadre del concorso.
+
+    team_of_by_contest: {id concorso: {id utente: squadra}} - la squadra che il partecipante aveva in QUEL concorso
+    (vedi services/clubs.team_map_for_contest), cosi' un cambio di squadra non riscrive i concorsi gia' pubblicati.
+    Restituisce la classifica e, per ogni concorso, il dettaglio (TeamScore) con il partecipante che ha portato i punti.
+    A pari punti: countback sulle posizioni di squadra (come nella generale); stessi valori = pari merito.
+    """
     by_team: dict[str, Standing] = {}
-    depth = max([len(r) for r in rankings.values()] + [len(rules.team_scale)])
+    details: dict[int, list[TeamScore]] = {}
+    depth = max([len(rules.team_scale)] + [len(r) for r in rankings.values()])
     for cid, ranking in rankings.items():
-        seen: list[str] = []
-        for r in ranking:                              # gia' in ordine di merito: il primo di ogni squadra e' il migliore
-            team = team_of.get(r.entry.user_id)
-            if team and team not in seen:
-                seen.append(team)
-        for pos, team in enumerate(seen, start=1):
-            s = by_team.setdefault(team, Standing(team))
-            s.positions[cid] = pos
-            s.points += points_for(pos, rules.team_scale)
+        details[cid] = team_contest_ranking(ranking, team_of_by_contest.get(cid, {}), rules)
+        for ts in details[cid]:
+            s = by_team.setdefault(team_key(ts.team), Standing(ts.team))   # nome mostrato = la prima grafia incontrata
+            s.positions[cid] = ts.position
+            s.points += ts.points
     ordered = _sort_and_rank(list(by_team.values()), depth)
     for s in ordered:
         s.prize, s.prize_pending = 0, False            # S13: nessun premio per la classifica a squadre
-    return ordered, {}
-
-
-def best_of_team(ranking: list[Ranked], team_of: dict[int, str]) -> dict[str, Ranked]:
-    out: dict[str, Ranked] = {}
-    for r in ranking:
-        team = team_of.get(r.entry.user_id)
-        if team and team not in out:
-            out[team] = r
-    return out
+    return ordered, details
 
 
 # ---------------------------------------------------------------------- premio fedeltà

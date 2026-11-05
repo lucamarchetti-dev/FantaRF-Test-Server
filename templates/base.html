@@ -18,7 +18,8 @@
     <nav class="nav" aria-label="Navigazione principale">
       <a href="{{ url_for('contests.listing') }}" {% if request.endpoint and request.endpoint.startswith('contests.') %}aria-current="page"{% endif %}>Concorsi</a>
       <a href="{{ url_for('players.listing') }}" {% if request.endpoint == 'players.listing' %}aria-current="page"{% endif %}>Giocatori</a>
-      <a href="{{ url_for('standings.index') }}" {% if request.endpoint and request.endpoint.startswith('standings.') %}aria-current="page"{% endif %}>Classifica</a>
+      <a href="{{ url_for('standings.index') }}" {% if request.endpoint == 'standings.index' %}aria-current="page"{% endif %}>Classifica</a>
+      <a href="{{ url_for('standings.teams') }}" {% if request.endpoint == 'standings.teams' %}aria-current="page"{% endif %}>Squadre</a>
       {% if g.user and g.user['role'] == 'staff' %}
       <a href="{{ url_for('staff.index') }}" {% if request.endpoint and request.endpoint.startswith('staff.') %}aria-current="page"{% endif %}>Staff</a>
       {% endif %}

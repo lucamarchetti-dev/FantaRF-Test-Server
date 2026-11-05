@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import team_label %}
 {% block title %}Classifica{% endblock %}
 {% block content %}
 <h1>Classifica{% if season %} <span class="h1-sub">{{ season['name'] }}</span>{% endif %}</h1>
@@ -26,7 +27,7 @@
         <td data-label="Primi posti">{{ r.positions.values()|select('equalto', 1)|list|length }}</td>
         <td data-label="Secondi posti">{{ r.positions.values()|select('equalto', 2)|list|length }}</td>
         <td data-label="Terzi posti">{{ r.positions.values()|select('equalto', 3)|list|length }}</td>
-        <td data-label="Squadra">{{ r.club or '—' }}</td>
+        <td data-label="Squadra">{% if r.club %}{{ team_label(r.club) }}{% else %}—{% endif %}</td>
       </tr>{% endfor %}</tbody>
     </table></div>
     {% else %}<p>Non ci sono ancora risultati pubblicati per questa stagione.</p>{% endif %}
@@ -34,18 +35,20 @@
   </section>
   {% if data and data.rankings %}
   <section class="panel"><h2>Classifiche dei concorsi</h2>
-    {% for item in data.rankings %}
+    <p class="hint">Dal concorso più recente al più vecchio.</p>
+    {% for item in data.rankings|sort(attribute='contest.number', reverse=true) %}
       <h3>{{ item.contest.number }} · {{ item.contest.name }}</h3>
-      {% if item.rows %}<div class="table-wrap"><table class="table simple compact"><thead><tr><th>Pos.</th><th>Partecipante</th><th>Punteggio</th><th>Premio</th></tr></thead><tbody>
-      {% for r in item.rows %}<tr><td>{{ r.position }}</td><th scope="row">{{ r.name }}</th><td>{{ r.total|num }}</td><td>{{ r.prize if r.prize else '—' }}</td></tr>{% endfor %}
+      {% if item.rows %}<div class="table-wrap"><table class="table simple compact"><thead><tr><th>Pos.</th><th>Partecipante</th><th>Squadra</th><th>Punteggio</th><th>Premio</th></tr></thead><tbody>
+      {% for r in item.rows %}<tr><td>{{ r.position }}</td><th scope="row">{{ r.name }}</th><td>{% if r.club %}{{ team_label(r.club) }}{% else %}—{% endif %}</td><td>{{ r.total|num }}</td><td>{{ r.prize if r.prize else '—' }}</td></tr>{% endfor %}
       </tbody></table></div>{% else %}<p>Nessuna formazione con punteggio pubblicato.</p>{% endif %}
     {% endfor %}
   </section>
   {% endif %}
   {% if teams_data %}
   <section class="panel"><h2>Classifica a squadre</h2>
-    {% if teams_data.rows %}<div class="table-wrap"><table class="table simple"><thead><tr><th>Pos.</th><th>Squadra</th><th>Punti</th></tr></thead><tbody>{% for r in teams_data.rows %}<tr><td>{{ r.rank }}{% if r.tied %} ex aequo{% endif %}</td><th scope="row">{{ r.team }}</th><td>{{ r.points }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p>Non ci sono ancora dati sufficienti per la classifica a squadre.</p>{% endif %}
+    {% if teams_data.rows %}<div class="table-wrap"><table class="table simple"><thead><tr><th scope="col">Pos.</th><th scope="col">Squadra</th><th scope="col">Punti</th></tr></thead><tbody>{% for r in teams_data.rows %}<tr><td data-label="Posizione">{{ r.rank }}{% if r.tied %} <span class="tag tag-draft">pari merito</span>{% endif %}</td><th scope="row" data-label="Squadra">{{ team_label(r.team) }}</th><td data-label="Punti">{{ r.points }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p>Non ci sono ancora dati sufficienti per la classifica a squadre.</p>{% endif %}
     {% if teams_data.without_team %}<p class="hint">Partecipanti senza squadra assegnata: {{ teams_data.without_team|join(', ') }}.</p>{% endif %}
+    <p><a href="{{ url_for('standings.teams', stagione=season['id']) }}">Dettaglio per concorso della classifica a squadre →</a></p>
   </section>
   {% endif %}
 {% endif %}

@@ -101,7 +101,8 @@ h1, h2, h3 { font-family: var(--display); line-height: 1.15; letter-spacing: -.0
 h1 { font-size: clamp(1.8rem, 4.6vw, 2.5rem); font-weight: 800; margin: .5rem 0 .9rem; }
 h2 { font-size: 1.3rem; font-weight: 750; }
 h3 { font-size: 1.1rem; font-weight: 700; }
-p { margin: 0 0 .9rem; max-width: 70ch; }
+p { margin: 0 0 .9rem; }   /* i testi occupano tutta la larghezza disponibile: meno righe */
+.hero p { max-width: 70ch; }   /* nella fascia blu della home resta stretto: a destra c'e' il disegno del campo */
 a { color: var(--primary-ink); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 a:hover { color: var(--primary); text-decoration-thickness: 2px; }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; background: var(--surface-2); padding: .05em .3em; border-radius: 4px; }
@@ -192,7 +193,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
 /* ---- avvisi: l'icona dice la gravità anche senza il colore ---- */
 .notice {
   position: relative; border: 1px solid; border-left-width: 6px; border-radius: 12px;
-  padding: .8rem 1rem .8rem 3.1rem; margin: 0 0 1rem; max-width: 70ch; box-shadow: var(--shadow);
+  padding: .8rem 1rem .8rem 3.1rem; margin: 0 0 1rem; box-shadow: var(--shadow);
 }
 .notice::before {
   content: "✓"; position: absolute; left: .9rem; top: .82rem; width: 1.4rem; height: 1.4rem; border-radius: 50%;
@@ -439,17 +440,17 @@ textarea { min-height: 5rem; resize: vertical; }
 }
 
 /* ---- classifiche: numeri di maglia e podio ---- */
-body.page-standings-index .table tbody td:first-child { font-family: var(--display); font-weight: 800; font-size: 1.2rem; width: 4.2rem; color: var(--muted); }
-body.page-standings-index .table.compact tbody td:first-child { font-size: 1.05rem; width: 3.4rem; }
-body.page-standings-index .table tbody tr:nth-child(-n+3) td:first-child { color: var(--ink); }
-body.page-standings-index .table tbody tr:nth-child(1) td:first-child { box-shadow: inset 6px 0 0 var(--gold); }
-body.page-standings-index .table tbody tr:nth-child(2) td:first-child { box-shadow: inset 6px 0 0 var(--silver); }
-body.page-standings-index .table tbody tr:nth-child(3) td:first-child { box-shadow: inset 6px 0 0 var(--bronze); }
-body.page-standings-index .table tbody tr:nth-child(1) { background: var(--wash-1); }
-body.page-standings-index .table tbody tr:nth-child(1):hover { background: var(--wash-1-hover); }
-body.page-standings-index .table tbody td:nth-child(3) { font-family: var(--display); font-weight: 800; font-size: 1.15rem; color: var(--primary-ink); }
-body.page-standings-index .table:not(.compact) tbody td:nth-child(n+4) { color: var(--muted); }
-body.page-standings-index h3 { margin-top: 1.1rem; }
+body:is(.page-standings-index, .page-standings-teams) .table tbody td:first-child { font-family: var(--display); font-weight: 800; font-size: 1.2rem; width: 4.2rem; color: var(--muted); }
+body:is(.page-standings-index, .page-standings-teams) .table.compact tbody td:first-child { font-size: 1.05rem; width: 3.4rem; }
+body:is(.page-standings-index, .page-standings-teams) .table tbody tr:nth-child(-n+3) td:first-child { color: var(--ink); }
+body:is(.page-standings-index, .page-standings-teams) .table tbody tr:nth-child(1) td:first-child { box-shadow: inset 6px 0 0 var(--gold); }
+body:is(.page-standings-index, .page-standings-teams) .table tbody tr:nth-child(2) td:first-child { box-shadow: inset 6px 0 0 var(--silver); }
+body:is(.page-standings-index, .page-standings-teams) .table tbody tr:nth-child(3) td:first-child { box-shadow: inset 6px 0 0 var(--bronze); }
+body:is(.page-standings-index, .page-standings-teams) .table tbody tr:nth-child(1) { background: var(--wash-1); }
+body:is(.page-standings-index, .page-standings-teams) .table tbody tr:nth-child(1):hover { background: var(--wash-1-hover); }
+body:is(.page-standings-index, .page-standings-teams) .table tbody td:nth-child(3) { font-family: var(--display); font-weight: 800; font-size: 1.15rem; color: var(--primary-ink); }
+body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) tbody td:nth-child(n+4) { color: var(--muted); }
+body:is(.page-standings-index, .page-standings-teams) h3 { margin-top: 1.1rem; }
 
 /* ---- telefono: le tabelle diventano schede ---- */
 @media (max-width: 42rem) {
@@ -500,29 +501,29 @@ body.page-standings-index h3 { margin-top: 1.1rem; }
   .facts dd { font-size: 2rem; }
 
   /* classifica generale: riga 1 = posizione, nome, punti; riga 2 = le altre cifre come etichette */
-  body.page-standings-index .table:not(.compact) tr { display: flex; flex-wrap: wrap; align-items: center; padding: .55rem .6rem; gap: .25rem 0; }
-  body.page-standings-index .table:not(.compact) td:first-child { flex: 0 0 3rem; width: 3rem; padding: 0 0 0 .2rem; font-size: 1.5rem; display: block; box-shadow: none; }
-  body.page-standings-index .table:not(.compact) td:first-child::before { display: none; }
-  body.page-standings-index .table:not(.compact) tbody th { flex: 1 1 calc(100% - 3rem - 4.5rem); width: auto; padding: 0 .4rem; }
-  body.page-standings-index .table:not(.compact) td:nth-child(3) { flex: 0 0 4.5rem; width: 4.5rem; padding: 0 .4rem 0 0; justify-content: flex-end; font-size: 1.4rem; }
-  body.page-standings-index .table:not(.compact) td:nth-child(3)::before { display: none; }
-  body.page-standings-index .table:not(.compact) td:nth-child(n+4) {
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) tr { display: flex; flex-wrap: wrap; align-items: center; padding: .55rem .6rem; gap: .25rem 0; }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) td:first-child { flex: 0 0 3rem; width: 3rem; padding: 0 0 0 .2rem; font-size: 1.5rem; display: block; box-shadow: none; }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) td:first-child::before { display: none; }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) tbody th { flex: 1 1 calc(100% - 3rem - 4.5rem); width: auto; padding: 0 .4rem; }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) td:nth-child(3) { flex: 0 0 4.5rem; width: 4.5rem; padding: 0 .4rem 0 0; justify-content: flex-end; font-size: 1.4rem; }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) td:nth-child(3)::before { display: none; }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) td:nth-child(n+4) {
     flex: 0 0 auto; width: auto; margin: .15rem .3rem 0 0; padding: .05rem .55rem; gap: .35rem; border: 1px solid var(--line);
     border-radius: 999px; background: var(--surface-2); font-size: .78rem; color: var(--ink); line-height: 1.5;
   }
-  body.page-standings-index .table:not(.compact) td:nth-child(n+4)::before { flex: none; font-size: .75rem; }
-  body.page-standings-index .table:not(.compact) tbody tr:nth-child(-n+3) td:first-child { box-shadow: none; }
-  body.page-standings-index .table:not(.compact) tbody tr:nth-child(1) { box-shadow: inset 6px 0 0 var(--gold), var(--shadow); background: linear-gradient(var(--wash-1), var(--wash-1)), var(--surface); }
-  body.page-standings-index .table:not(.compact) tbody tr:nth-child(2) { box-shadow: inset 6px 0 0 var(--silver), var(--shadow); }
-  body.page-standings-index .table:not(.compact) tbody tr:nth-child(3) { box-shadow: inset 6px 0 0 var(--bronze), var(--shadow); }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) td:nth-child(n+4)::before { flex: none; font-size: .75rem; }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) tbody tr:nth-child(-n+3) td:first-child { box-shadow: none; }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) tbody tr:nth-child(1) { box-shadow: inset 6px 0 0 var(--gold), var(--shadow); background: linear-gradient(var(--wash-1), var(--wash-1)), var(--surface); }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) tbody tr:nth-child(2) { box-shadow: inset 6px 0 0 var(--silver), var(--shadow); }
+  body:is(.page-standings-index, .page-standings-teams) .table:not(.compact) tbody tr:nth-child(3) { box-shadow: inset 6px 0 0 var(--bronze), var(--shadow); }
   /* classifiche dei concorsi: 4 colonne strette, restano una tabella vera */
-  body.page-standings-index .table.compact { display: table; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
-  body.page-standings-index .table.compact thead { position: static; width: auto; height: auto; overflow: visible; clip: auto; display: table-header-group; }
-  body.page-standings-index .table.compact tbody { display: table-row-group; }
-  body.page-standings-index .table.compact tr { display: table-row; border: 0; border-radius: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
-  body.page-standings-index .table.compact th, body.page-standings-index .table.compact td, body.page-standings-index .table.compact tbody th { display: table-cell; width: auto; padding: .4rem .5rem; border-bottom: 1px solid var(--line); }
-  body.page-standings-index .table.compact td::before { display: none; }
-  body.page-standings-index .table.compact tbody tr:last-child td, body.page-standings-index .table.compact tbody tr:last-child th { border-bottom: 0; }
+  body:is(.page-standings-index, .page-standings-teams) .table.compact { display: table; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+  body:is(.page-standings-index, .page-standings-teams) .table.compact thead { position: static; width: auto; height: auto; overflow: visible; clip: auto; display: table-header-group; }
+  body:is(.page-standings-index, .page-standings-teams) .table.compact tbody { display: table-row-group; }
+  body:is(.page-standings-index, .page-standings-teams) .table.compact tr { display: table-row; border: 0; border-radius: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
+  body:is(.page-standings-index, .page-standings-teams) .table.compact th, body:is(.page-standings-index, .page-standings-teams) .table.compact td, body:is(.page-standings-index, .page-standings-teams) .table.compact tbody th { display: table-cell; width: auto; padding: .4rem .5rem; border-bottom: 1px solid var(--line); }
+  body:is(.page-standings-index, .page-standings-teams) .table.compact td::before { display: none; }
+  body:is(.page-standings-index, .page-standings-teams) .table.compact tbody tr:last-child td, body:is(.page-standings-index, .page-standings-teams) .table.compact tbody tr:last-child th { border-bottom: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
@@ -616,3 +617,9 @@ details > summary { cursor: pointer; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* ---- classifica a squadre ---- */
+.team-table td .cell-pts { display: block; font-weight: 700; }
+.team-table td .cell-sub { display: block; color: var(--muted); font-size: .78rem; line-height: 1.25; }
+.team-table .team-label { display: inline-flex; align-items: center; gap: .5rem; }
+.inline-form .btn-sm { flex: none; }

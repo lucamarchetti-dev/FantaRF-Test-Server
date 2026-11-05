@@ -2,8 +2,19 @@
 {% block title %}Utenti{% endblock %}
 {% block content %}
 <h1>Utenti</h1>
-<table class="table simple">
-  <thead><tr><th scope="col">Nome</th><th scope="col">Nome utente</th><th scope="col">Ruolo</th><th scope="col">Stato</th>{% if season %}<th scope="col">Stagione {{ season['name'] }}</th>{% endif %}<th scope="col"><span class="sr-only">Azioni</span></th></tr></thead>
+{% if season and missing_teams %}
+<div class="notice notice-warn" role="status">
+  <p><strong>{{ missing_teams }} partecipant{{ 'e' if missing_teams == 1 else 'i' }} senza squadra</strong> nella stagione {{ season['name'] }}: finché non ne hanno una non possono portare punti alla classifica a squadre. Assegnala qui sotto, riga per riga.</p>
+  <form method="post" action="{{ url_for('staff.teams_copy_previous') }}" class="inline">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <button class="btn btn-quiet btn-sm" type="submit" data-confirm="Copiare dalla stagione precedente la squadra di chi ne è senza? Chi ha già una squadra non viene toccato.">Copia le squadre dalla stagione precedente</button>
+  </form>
+</div>
+{% endif %}
+{% if not season %}<p class="hint">Senza una stagione attiva la squadra non si può assegnare: la squadra di un partecipante è legata alla stagione.</p>{% endif %}
+<datalist id="known-teams">{% for t in known_teams %}<option value="{{ t }}">{% endfor %}</datalist>
+<div class="table-wrap"><table class="table simple">
+  <thead><tr><th scope="col">Nome</th><th scope="col">Nome utente</th><th scope="col">Ruolo</th><th scope="col">Stato</th>{% if season %}<th scope="col">Squadra</th><th scope="col">Stagione {{ season['name'] }}</th>{% endif %}<th scope="col"><span class="sr-only">Azioni</span></th></tr></thead>
   <tbody>
   {% for u in users %}
     <tr>
@@ -15,6 +26,16 @@
         {% if u['must_change_password'] %}<span class="tag tag-draft">Password provvisoria</span>{% endif %}
       </td>
       {% if season %}
+      <td data-label="Squadra">
+        <form method="post" action="{{ url_for('staff.user_team', user_id=u['id']) }}" class="inline-form">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <label class="sr-only" for="team-{{ u['id'] }}">Squadra di {{ u['display_name'] }}</label>
+          <input id="team-{{ u['id'] }}" name="team_name" list="known-teams" value="{{ u['team_name'] or '' }}" maxlength="40" autocomplete="off"
+                 {% if u['role'] == 'user' %}required placeholder="Squadra (obbligatoria)"{% else %}placeholder="Facoltativa per lo staff"{% endif %}>
+          <button class="btn btn-quiet btn-sm" type="submit">Salva</button>
+        </form>
+        {% if u['role'] == 'user' and not u['team_name'] %}<span class="tag tag-off">Senza squadra</span>{% endif %}
+      </td>
       <td data-label="Stagione">
         {% set ex = exclusions.get(u['id']) %}
         {% if ex %}<span class="tag tag-off" title="{{ ex.reason }}">Escluso</span> <span class="muted">{{ ex.reason }}</span>
@@ -43,7 +64,8 @@
     </tr>
   {% endfor %}
   </tbody>
-</table>
+</table></div>
+<p class="hint">Cambiare la squadra vale per i concorsi non ancora pubblicati: quelli già pubblicati restano com'erano. Assegnare una squadra a chi non l'aveva completa invece anche i concorsi passati.</p>
 
 <section class="panel">
   <h2>Nuovo account</h2>
@@ -54,8 +76,10 @@
     <div class="field"><label for="username">Nome utente</label><input id="username" name="username" value="{{ form.get('username', '') }}" required minlength="3" maxlength="40" autocapitalize="none" spellcheck="false"></div>
     <div class="field"><label for="display_name">Nome visualizzato</label><input id="display_name" name="display_name" value="{{ form.get('display_name', '') }}" required maxlength="60"></div>
     <div class="field"><label for="role">Ruolo</label>
-      <select id="role" name="role"><option value="user">Partecipante</option><option value="staff" {% if form.get('role') == 'staff' %}selected{% endif %}>Staff</option></select>
+      <select id="role" name="role" data-team-required-for="user" data-team-field="new-team"><option value="user">Partecipante</option><option value="staff" {% if form.get('role') == 'staff' %}selected{% endif %}>Staff</option></select>
     </div>
+    <div class="field"><label for="new-team">Squadra <span class="muted">(obbligatoria per i partecipanti)</span></label>
+      <input id="new-team" name="team_name" list="known-teams" value="{{ form.get('team_name', '') }}" maxlength="40" autocomplete="off" {% if form.get('role', 'user') != 'staff' %}required{% endif %}></div>
     <div class="field actions-inline"><button class="btn" type="submit">Crea account</button></div>
   </form>
 </section>

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_macros.html" import team_label %}
+{% block title %}Classifica a squadre{% endblock %}
+{% block content %}
+<h1>Classifica a squadre{% if season %} <span class="h1-sub">{{ season['name'] }}</span>{% endif %}</h1>
+{% if seasons|length > 1 %}
+<form method="get" class="panel compact-form">
+  <label for="stagione">Stagione</label>
+  <select id="stagione" name="stagione">
+    {% for s in seasons %}<option value="{{ s['id'] }}" {% if season and s['id'] == season['id'] %}selected{% endif %}>{{ s['name'] }}{% if s['status'] == 'active' %} · attiva{% endif %}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Visualizza</button>
+</form>
+{% endif %}
+{% if not season %}
+  <section class="panel"><p>Non è ancora stata creata una stagione.</p></section>
+{% else %}
+  <section class="panel">
+    <p>Ogni concorso porta punti a una squadra <strong>solo attraverso il suo miglior partecipante</strong>: gli altri della stessa squadra vengono esclusi e le posizioni scalano, anche oltre il 10° posto (chi sta sotto sale a prendere il posto di chi è stato tolto).
+      I punti si assegnano in base alla <em>nuova</em> posizione della squadra ({{ teams_data.scale|join(' · ') }}) e si sommano concorso dopo concorso.</p>
+    {% if not teams_data.confirmed %}<p class="notice notice-warn" role="status">La scala dei punti delle squadre è ancora provvisoria: la classifica non è definitiva.</p>{% endif %}
+    <p class="hint"><a href="{{ url_for('standings.index', stagione=season['id']) }}">← Classifica individuale</a></p>
+  </section>
+
+  <section class="panel"><h2>Classifica a squadre</h2>
+    {% if teams_data.rows %}<div class="table-wrap"><table class="table simple"><thead><tr><th scope="col">Pos.</th><th scope="col">Squadra</th><th scope="col">Punti</th></tr></thead><tbody>{% for r in teams_data.rows %}<tr><td data-label="Posizione">{{ r.rank }}{% if r.tied %} <span class="tag tag-draft">pari merito</span>{% endif %}</td><th scope="row" data-label="Squadra">{{ team_label(r.team) }}</th><td data-label="Punti">{{ r.points }}</td></tr>{% endfor %}</tbody></table></div>
+    <p class="hint">A parità di punti decide chi ha ottenuto più primi posti, poi più secondi, e così via; se anche questi coincidono è pari merito.</p>
+    {% else %}<p>Non ci sono ancora concorsi pubblicati con punteggi: la classifica a squadre comparirà con il primo risultato pubblicato.</p>{% endif %}
+    {% if teams_data.without_team %}<p class="hint">Partecipanti senza squadra assegnata (non portano punti a nessuna squadra): {{ teams_data.without_team|join(', ') }}.</p>{% endif %}
+  </section>
+
+  {% if teams_data.contest_details %}
+  <section class="panel"><h2>Classifiche a squadre dei singoli concorsi</h2>
+    <p class="hint">Dal concorso più recente al più vecchio.</p>
+    {% for item in teams_data.contest_details %}
+      <h3>{{ item.contest.number }} · {{ item.contest.name }}</h3>
+      {% if item.rows %}<div class="table-wrap"><table class="table simple compact"><thead><tr><th scope="col">Pos.</th><th scope="col">Squadra</th><th scope="col">Punti</th><th scope="col">Portati da</th><th scope="col">Pos. individuale</th></tr></thead><tbody>
+      {% for r in item.rows %}<tr>
+        <td data-label="Posizione">{{ r.team_position }}</td>
+        <th scope="row" data-label="Squadra">{{ team_label(r.team) }}</th>
+        <td data-label="Punti">{{ r.points }}</td>
+        <td data-label="Portati da">{{ r.name }}</td>
+        <td data-label="Pos. individuale">{{ r.individual_position }}°</td>
+      </tr>{% endfor %}
+      </tbody></table></div>{% else %}<p>Nessuna squadra ha punti in questo concorso.</p>{% endif %}
+    {% endfor %}
+  </section>
+  {% endif %}
+{% endif %}
+{% endblock %}

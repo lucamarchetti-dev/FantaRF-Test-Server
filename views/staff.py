@@ -11,6 +11,7 @@ from ..domain.excel_reader import ImportFileError
 from ..domain.listone import FIELDS, FIELD_LABELS
 from ..security import staff_guard
 from ..services import admission
+from ..services import clubs as clubs_svc
 from ..services import imports as imports_svc
 from ..services import players as players_svc
 from ..services import seasons as seasons_svc
@@ -79,21 +80,56 @@ def activate_season(season_id):
 def users():
     db = get_db()
     error = None
+    season = seasons_svc.active_season(db)
     if request.method == "POST":
         try:
             _id, password = users_svc.create_user(
                 db, username=request.form.get("username"), display_name=request.form.get("display_name"),
                 role=request.form.get("role", "user"), password=None, actor_id=g.user["id"],
+                team_name=request.form.get("team_name"),
             )
             return render_template(
                 "staff/credentials.html", username=request.form.get("username", "").strip(),
                 display_name=request.form.get("display_name", ""), password=password, reset=False,
+                team_name=clubs_svc.clean_name(request.form.get("team_name")),
             )
         except users_svc.UserError as exc:
             error = str(exc)
+    all_users = users_svc.list_users(db, season["id"] if season else None)
+    missing = sum(1 for u in all_users if season and u["role"] == "user" and u["status"] == "active" and not u["team_name"])
+    return render_template("staff/users.html", users=all_users, error=error, form=request.form,
+                           season=season, exclusions=admission.exclusions_map(db, season["id"]) if season else {},
+                           known_teams=clubs_svc.known_team_names(db), missing_teams=missing)
+
+
+@bp.route("/utenti/<int:user_id>/squadra", methods=["POST"])
+def user_team(user_id):
+    """Assegna o cambia la squadra di un utente nella stagione attiva (i concorsi gia' pubblicati restano com'erano)."""
+    db = get_db()
     season = seasons_svc.active_season(db)
-    return render_template("staff/users.html", users=users_svc.list_users(db), error=error, form=request.form,
-                           season=season, exclusions=admission.exclusions_map(db, season["id"]) if season else {})
+    try:
+        if season is None:
+            raise clubs_svc.ClubError("Non c'è una stagione attiva: la squadra è legata alla stagione.")
+        clubs_svc.set_team(db, season["id"], user_id, request.form.get("team_name"), g.user["id"])
+        flash("Squadra aggiornata.", "ok")
+    except clubs_svc.ClubError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("staff.users"))
+
+
+@bp.route("/utenti/squadre/copia", methods=["POST"])
+def teams_copy_previous():
+    """Per chi non ha squadra nella stagione attiva, riprende l'ultima che aveva in una stagione precedente."""
+    db = get_db()
+    season = seasons_svc.active_season(db)
+    try:
+        if season is None:
+            raise clubs_svc.ClubError("Non c'è una stagione attiva.")
+        res = clubs_svc.copy_from_previous_season(db, season["id"], g.user["id"])
+        flash(f"Squadre copiate dalla stagione precedente: {res['copied']}. Ancora senza squadra: {res['missing']}.", "ok")
+    except clubs_svc.ClubError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("staff.users"))
 
 
 @bp.route("/utenti/<int:user_id>/stato", methods=["POST"])

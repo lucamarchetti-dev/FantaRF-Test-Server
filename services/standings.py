@@ -11,7 +11,7 @@ from fractions import Fraction
 
 from ..db import transaction
 from ..domain.contest import effective_status
-from ..domain.ranking import Entry, Rules, best_of_team, general_standings, loyalty_status, rank_contest, team_standings
+from ..domain.ranking import Entry, Rules, general_standings, loyalty_status, normalize_team, rank_contest, team_standings
 from ..timeutil import iso, parse_iso, utcnow, utcnow_iso
 from . import admission, audit, clubs
 from .contests import view as contest_view
@@ -52,8 +52,17 @@ def contest_ranking(db, contest_id: int, rules: Rules, excluded: set[int] | None
 
 
 def season_rankings(db, season_id: int, rules: Rules) -> list[dict]:
+    """Classifica individuale di ogni concorso pubblicato. Ogni riga porta anche 'club': la squadra che il partecipante
+    aveva IN QUEL concorso (solo per mostrarla: non cambia posizioni ne' punti)."""
     excl = excluded_ids(db, season_id)
-    return [{"contest": c, "rows": contest_ranking(db, c["id"], rules, excl)} for c in published_contests(db, season_id)]
+    out = []
+    for c in published_contests(db, season_id):
+        rows = contest_ranking(db, c["id"], rules, excl)
+        club_of = clubs.team_map_for_contest(db, season_id, c["id"])
+        for row in rows:
+            row["club"] = club_of.get(row["user_id"])
+        out.append({"contest": c, "rows": rows})
+    return out
 
 
 def _ranked_map(rankings: list[dict]) -> dict:
@@ -97,16 +106,36 @@ def general(db, season_id: int, rules: Rules) -> dict:
 
 
 def teams(db, season_id: int, rules: Rules) -> dict:
+    """Classifica a squadre della stagione: ricalcolata dai concorsi PUBBLICATI, mai salvata.
+
+    Per ogni concorso si usa la squadra che ogni partecipante aveva IN QUEL concorso (clubs.team_map_for_contest).
+    rows: classifica generale, con per ogni concorso punti, posizione di squadra e partecipante che li ha portati.
+    contest_details: per ogni concorso la classifica a squadre con il partecipante e la sua posizione individuale.
+    """
     rankings = season_rankings(db, season_id, rules)
-    team_of = clubs.team_map(db, season_id)
-    standings, _ = team_standings(_ranked_map(rankings), team_of, rules)
-    best = {r["contest"]["id"]: best_of_team([row["ranked"] for row in r["rows"]], team_of) for r in rankings}
-    names = _names(db, {rk.entry.user_id for per in best.values() for rk in per.values()})
-    rows = [{"rank": s.rank, "tied": s.tied, "team": s.key, "points": s.points, "positions": s.positions,
-             "best": {cid: names[best[cid][s.key].entry.user_id] for cid in s.positions}} for s in standings]
-    played = {u for r in rankings for row in r["rows"] for u in [row["user_id"]]}
-    return {"rows": rows, "contests": [r["contest"] for r in rankings], "confirmed": rules.team_scale_confirmed,
-            "without_team": sorted(_names(db, [u for u in played if u not in team_of]).values(), key=str.casefold)}
+    team_by_contest = {r["contest"]["id"]: clubs.team_map_for_contest(db, season_id, r["contest"]["id"]) for r in rankings}
+    standings, details = team_standings(_ranked_map(rankings), team_by_contest, rules)
+    names = _names(db, {ts.ranked.entry.user_id for per in details.values() for ts in per})
+
+    def cell(ts) -> dict:
+        uid = ts.ranked.entry.user_id
+        return {"points": ts.points, "team_position": ts.position, "user_id": uid, "name": names[uid],
+                "individual_position": ts.ranked.position, "total": ts.ranked.entry.total}
+
+    by_key = {cid: {normalize_team(ts.team).casefold(): ts for ts in per} for cid, per in details.items()}
+    rows = []
+    for s in standings:
+        key = normalize_team(s.key).casefold()
+        cells = {cid: cell(by_key[cid][key]) for cid in s.positions}
+        rows.append({"rank": s.rank, "tied": s.tied, "team": s.key, "points": s.points, "positions": s.positions, "cells": cells})
+    # dal concorso piu' recente al piu' vecchio
+    contest_details = [{"contest": r["contest"], "rows": [{**cell(ts), "team": ts.team} for ts in details[r["contest"]["id"]]]}
+                       for r in sorted(rankings, key=lambda r: r["contest"]["number"], reverse=True)]
+    # chi ha giocato ma non aveva squadra (in quel concorso) viene saltato senza errori: lo si segnala solo come avviso
+    without = {row["name"] for r in rankings for row in r["rows"]
+               if not team_by_contest[r["contest"]["id"]].get(row["user_id"])}
+    return {"rows": rows, "contests": [r["contest"] for r in rankings], "contest_details": contest_details,
+            "confirmed": rules.team_scale_confirmed, "scale": rules.team_scale, "without_team": sorted(without, key=str.casefold)}
 
 
 def user_summary(db, season_id: int, user_id: int, rules: Rules) -> dict:

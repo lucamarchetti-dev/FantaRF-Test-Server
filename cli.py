@@ -9,6 +9,7 @@ from flask import current_app
 
 from . import db as dbm
 from .domain.excel_reader import ImportFileError
+from .services import clubs as clubs_svc
 from .services import imports as imports_svc
 from .services import seasons as seasons_svc
 from .services import users as users_svc
@@ -32,21 +33,46 @@ def register(app) -> None:
     @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True)
     @click.option("--must-change/--no-must-change", default=False, show_default=True,
                   help="Richiede il cambio password al primo accesso.")
-    def create_user(username, display_name, role, password, must_change):
+    @click.option("--team", "team_name", default=None,
+                  help="Squadra del partecipante (OBBLIGATORIA con --role user; usa la stagione attiva).")
+    def create_user(username, display_name, role, password, must_change, team_name):
         """Crea un account (utile per il primo account staff)."""
         from .security import password_problem
+        if role == "user" and not (team_name or "").strip():
+            raise click.ClickException("La squadra è obbligatoria per i partecipanti: aggiungi --team \"Nome squadra\".")
         problem = password_problem(password, current_app.config["MIN_PASSWORD_LENGTH"])
         if problem:
             raise click.ClickException(problem)
         conn = dbm.connect(current_app.config["DATABASE"])
         try:
             users_svc.create_user(conn, username=username, display_name=display_name, role=role,
-                                  password=password, actor_id=None, must_change=must_change)
+                                  password=password, actor_id=None, must_change=must_change, team_name=team_name)
         except users_svc.UserError as exc:
             raise click.ClickException(str(exc))
         finally:
             conn.close()
         click.echo(f"Account «{username}» ({role}) creato.")
+
+    @app.cli.command("set-team")
+    @click.option("--username", required=True)
+    @click.option("--team", "team_name", required=True, help="Nome della squadra (vuoto = toglie la squadra, solo per lo staff).")
+    def set_team(username, team_name):
+        """Assegna o cambia la squadra di un account esistente nella stagione attiva (senza toccare credenziali e dati)."""
+        conn = dbm.connect(current_app.config["DATABASE"])
+        try:
+            season = seasons_svc.active_season(conn)
+            if season is None:
+                raise click.ClickException("Nessuna stagione attiva: la squadra è legata alla stagione.")
+            user = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+            if user is None:
+                raise click.ClickException(f"Utente «{username}» inesistente.")
+            try:
+                clubs_svc.set_team(conn, season["id"], user["id"], team_name, None)
+            except clubs_svc.ClubError as exc:
+                raise click.ClickException(str(exc))
+        finally:
+            conn.close()
+        click.echo(f"Squadra di «{username}» nella stagione {season['name']}: {team_name.strip() or 'nessuna'}.")
 
     @app.cli.command("create-season")
     @click.argument("name")
